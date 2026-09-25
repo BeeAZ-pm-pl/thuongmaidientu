@@ -3,10 +3,12 @@ const cors = require('cors');
 const path = require('path');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const config = require('./config');
+const loggerMiddleware = require('./middlewares/loggerMiddleware');
 
 const app = express();
 
 app.use(cors());
+app.use(loggerMiddleware);
 
 app.get('/api/health', (req, res) => {
   res.json({
