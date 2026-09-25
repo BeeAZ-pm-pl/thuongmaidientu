@@ -50,7 +50,7 @@ Dự án áp dụng kiến trúc phần mềm phân tán **Microservices** hiệ
 
 | STT | Thành viên | Vai trò & Nhiệm vụ chính | Nhánh tính năng |
 | :---: | :--- | :--- | :--- |
-| **1** | **Nguyễn Công Đạt** *(Nhóm trưởng)* | Thiết kế kiến trúc tổng thể, API Gateway, Identity Service, Docker Compose & Quản lý CSDL | `master` |
+| **1** | **Nguyễn Công Đạt** *(Nhóm trưởng)* | Thiết kế kiến trúc tổng thể, API Gateway, Identity Service, Docker Compose & Quản lý CSDL | `feature/architecture-gateway-identity` |
 | **2** | **Hoàng Minh Hiếu** | Phát triển Product Microservice, quản lý danh mục & kho, xây dựng giao diện Storefront Web | `feature/product-client` |
 | **3** | **Nguyễn Văn Hoàng** | Phát triển Order Microservice, quy trình đặt hàng, tích hợp RabbitMQ Producer & giao diện Admin Dashboard | `feature/order-admin` |
 | **4** | **Nguyễn Tô Trung Sơn** | Phát triển Notification Microservice, tích hợp RabbitMQ Consumer nhận sự kiện tự động | `feature/notification-service` |
