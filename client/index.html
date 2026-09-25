@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaShop | Mua Sắm Trực Tuyến Chính Hãng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/navbar.css">
+  <link rel="stylesheet" href="/css/storefront.css">
+  <link rel="stylesheet" href="/css/modals.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav-container">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">
+          <i class="ri-shopping-bag-3-fill"></i>
+        </div>
+        <span>NovaShop</span>
+      </a>
+
+      <div class="search-bar-wrapper">
+        <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm tai nghe, bàn phím, thiết bị số...">
+        <button id="searchBtn" class="search-btn" aria-label="Tìm kiếm">
+          <i class="ri-search-line"></i>
+        </button>
+      </div>
+
+      <div class="nav-actions">
+        <div id="userMenuWrapper">
+          <a href="/login" class="btn btn-secondary btn-sm">
+            <i class="ri-user-line"></i>
+            <span>Đăng Nhập</span>
+          </a>
+          <a href="/register" class="btn btn-primary btn-sm">
+            <span>Đăng Ký</span>
+          </a>
+        </div>
+
+        <a href="/cart" class="btn-icon cart-btn-trigger" aria-label="Giỏ hàng">
+          <i class="ri-shopping-cart-2-line"></i>
+          <span id="cartCountBadge" class="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-banner">
+          <div class="hero-content">
+            <div class="hero-tag">
+              <i class="ri-fire-fill"></i> Ưu đãi công nghệ đỉnh cao 2026
+            </div>
+            <h1 class="hero-title">
+              Nâng Tầm Trải Nghiệm <br>
+              <span class="hero-highlight">Mua Sắm Đẳng Cấp</span>
+            </h1>
+            <p class="hero-subtitle">
+              Khám phá hàng ngàn sản phẩm công nghệ, thời trang và gia dụng chính hãng với ưu đãi tốt nhất mỗi ngày.
+            </p>
+            <div class="hero-actions">
+              <a href="#productsSection" class="btn btn-primary btn-lg">
+                <span>Khám Phá Sản Phẩm</span>
+                <i class="ri-arrow-right-line"></i>
+              </a>
+            </div>
+          </div>
+          <div class="hero-showcase">
+            <div class="hero-img-card">
+              <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80" alt="Sản phẩm nổi bật">
+            </div>
+          </div>
+        </div>
+
+        <div class="trust-features">
+          <div class="trust-item">
+            <div class="trust-icon-box trust-box-1">
+              <i class="ri-truck-line"></i>
+            </div>
+            <div>
+              <div class="trust-title">Giao Hàng Siêu Tốc</div>
+              <div class="trust-desc">Nội thành chỉ trong 2 giờ</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon-box trust-box-2">
+              <i class="ri-shield-check-line"></i>
+            </div>
+            <div>
+              <div class="trust-title">100% Chính Hãng</div>
+              <div class="trust-desc">Bảo hành điện tử toàn quốc</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon-box trust-box-3">
+              <i class="ri-exchange-box-line"></i>
+            </div>
+            <div>
+              <div class="trust-title">Đổi Trả Dễ Dàng</div>
+              <div class="trust-desc">Miễn phí đổi trả trong 7 ngày</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon-box trust-box-4">
+              <i class="ri-customer-service-2-line"></i>
+            </div>
+            <div>
+              <div class="trust-title">Hỗ Trợ 24/7</div>
+              <div class="trust-desc">Tư vấn tận tình chu đáo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="category-nav-strip">
+      <div class="container">
+        <div id="categoryTabs" class="category-tabs">
+        </div>
+      </div>
+    </section>
+
+    <section id="flashSaleSection" class="flash-sale-section">
+      <div class="container">
+        <div class="flash-sale-header">
+          <div class="flash-sale-title-group">
+            <div class="flash-sale-badge">
+              <i class="ri-flashlight-fill"></i> FLASH SALE
+            </div>
+            <div class="flash-sale-countdown">
+              <span class="countdown-label">KẾT THÚC TRONG</span>
+              <div class="countdown-timer">
+                <span id="flashHour" class="timer-box">02</span>
+                <span class="timer-sep">:</span>
+                <span id="flashMin" class="timer-box">45</span>
+                <span class="timer-sep">:</span>
+                <span id="flashSec" class="timer-box">18</span>
+              </div>
+            </div>
+          </div>
+          <a href="#productsSection" class="flash-sale-view-all">
+            <span>Xem tất cả</span>
+            <i class="ri-arrow-right-s-line"></i>
+          </a>
+        </div>
+        <div id="flashSaleGrid" class="flash-sale-grid">
+        </div>
+      </div>
+    </section>
+
+    <section id="productsSection" class="shop-section">
+      <div class="container">
+        <div class="shop-toolbar">
+          <div class="shop-title-area">
+            <h2 class="shop-heading">Danh Sách Sản Phẩm</h2>
+            <span id="productTotalCount" class="shop-count">Đang tải dữ liệu...</span>
+          </div>
+          <div class="shop-filter-controls">
+            <select id="sortSelect" class="sort-select">
+              <option value="newest">Mới nhất</option>
+              <option value="price-asc">Giá: Thấp đến Cao</option>
+              <option value="price-desc">Giá: Cao đến Thấp</option>
+              <option value="rating">Đánh giá cao nhất</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="productsGrid" class="products-grid">
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">NovaShop</div>
+          <p class="footer-desc">
+            Nền tảng mua sắm trực tuyến uy tín hàng đầu, cam kết 100% hàng chính hãng, đổi trả thuận tiện và giao hàng nhanh toàn quốc.
+          </p>
+        </div>
+        <div>
+          <h3 class="footer-col-title">Về Chúng Tôi</h3>
+          <ul class="footer-links">
+            <li><a href="#">Giới thiệu công ty</a></li>
+            <li><a href="#">Tuyển dụng</a></li>
+            <li><a href="#">Điều khoản dịch vụ</a></li>
+            <li><a href="#">Chính sách bảo mật</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="footer-col-title">Hỗ Trợ Khách Hàng</h3>
+          <ul class="footer-links">
+            <li><a href="#">Trung tâm trợ giúp</a></li>
+            <li><a href="#">Hướng dẫn mua hàng</a></li>
+            <li><a href="#">Chính sách vận chuyển</a></li>
+            <li><a href="#">Tra cứu đơn hàng</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="footer-col-title">Thông Tin Liên Hệ</h3>
+          <p class="footer-desc">Hotline CSKH: 1900 8888 (8:00 - 21:30)</p>
+          <p class="footer-desc">Email hỗ trợ: support@novashop.vn</p>
+          <p class="footer-desc">Địa chỉ: Hà Nội & TP. Hồ Chí Minh</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 NovaShop. Bảo lưu mọi quyền.</div>
+        <div>Mua sắm thông minh & tiện lợi</div>
+      </div>
+    </div>
+  </footer>
+
+  <div id="quickviewModal" class="modal-overlay">
+    <div class="modal-card modal-card-shopee">
+      <button class="modal-close-btn" data-close-modal="quickviewModal">
+        <i class="ri-close-line"></i>
+      </button>
+      <div class="modal-body modal-body-shopee">
+        <div id="quickviewContent">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
