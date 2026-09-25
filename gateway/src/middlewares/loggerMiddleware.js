@@ -1,7 +1,3 @@
-/**
- * Middleware ghi log lưu lượng và đo lường độ trễ (Latency Tracking) tại API Gateway
- * Phát triển bởi: Nguyễn Công Đạt
- */
 const loggerMiddleware = (req, res, next) => {
   const start = Date.now();
   const { method, originalUrl } = req;
