@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đơn Mua Của Tôi | NovaShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/orders.css">
+</head>
+<body class="orders-page">
+
+  <header style="background: #ffffff; border-bottom: 1px solid var(--border-light); padding: 16px 0; box-shadow: var(--shadow-sm);">
+    <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">
+          <i class="ri-shopping-bag-3-fill"></i>
+        </div>
+        <span>NovaShop</span>
+      </a>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <a href="/cart" class="btn btn-secondary btn-sm">
+          <i class="ri-shopping-cart-line"></i>
+          <span>Giỏ hàng</span>
+        </a>
+        <a href="/" class="btn btn-primary btn-sm">
+          <i class="ri-store-2-line"></i>
+          <span>Cửa hàng</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="orders-container">
+    <div class="orders-header-bar">
+      <div>
+        <h1 class="orders-title">Lịch Sử Đơn Mua</h1>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px;">Theo dõi tiến độ giao hàng và các đơn hàng của bạn</p>
+      </div>
+    </div>
+
+    <div id="ordersLoading" style="text-align: center; padding: 40px 0;">
+      <i class="ri-loader-4-line ri-spin" style="font-size: 2rem; color: var(--primary);"></i>
+      <div style="margin-top: 10px; color: var(--text-muted);">Đang tải danh sách đơn hàng...</div>
+    </div>
+
+    <div id="ordersEmpty" style="display: none; background: #ffffff; border-radius: var(--radius-lg); padding: 60px 20px; text-align: center; border: 1px solid var(--border-light);">
+      <i class="ri-inbox-line" style="font-size: 3rem; color: var(--text-light); margin-bottom: 12px; display: block;"></i>
+      <div style="font-size: 1.125rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Bạn chưa có đơn mua nào</div>
+      <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 20px;">Hãy đặt hàng ngay để trải nghiệm dịch vụ của NovaShop</div>
+      <a href="/" class="btn btn-primary">
+        <span>Mua Sắm Ngay</span>
+      </a>
+    </div>
+
+    <div id="ordersList">
+    </div>
+  </main>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/orders.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giỏ Hàng & Đặt Hàng | NovaShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/cart.css">
+</head>
+<body class="cart-page">
+
+  <header class="cart-header">
+    <div class="cart-header-container">
+      <div class="cart-brand-group">
+        <a href="/" class="brand-logo">
+          <div class="brand-icon">
+            <i class="ri-shopping-bag-3-fill"></i>
+          </div>
+          <span>NovaShop</span>
+        </a>
+        <div class="cart-page-badge">Giỏ Hàng & Thanh Toán</div>
+      </div>
+      <a href="/" class="btn btn-secondary btn-sm">
+        <i class="ri-arrow-left-line"></i>
+        <span>Tiếp tục mua sắm</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="cart-main-container">
+    <div id="emptyCartView" class="cart-empty-panel" style="display: none;">
+      <i class="ri-shopping-cart-line" style="font-size: 3.5rem; color: var(--text-light); margin-bottom: 16px; display: block;"></i>
+      <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Giỏ hàng của bạn đang trống</h2>
+      <p style="color: var(--text-muted); font-size: 0.9375rem; margin-bottom: 24px;">Hãy khám phá các sản phẩm tuyệt vời và thêm vào giỏ hàng ngay!</p>
+      <a href="/" class="btn btn-primary btn-lg">
+        <i class="ri-store-2-line"></i>
+        <span>Khám Phá Cửa Hàng</span>
+      </a>
+    </div>
+
+    <div id="activeCartView" class="cart-layout" style="display: none;">
+      <div class="cart-items-card">
+        <div class="cart-card-header">
+          <span>Danh Sách Sản Phẩm Đã Chọn</span>
+          <span id="cartHeaderCount" style="color: var(--primary); font-size: 0.875rem;">0 món</span>
+        </div>
+        <div id="cartItemsList" class="cart-items-list">
+        </div>
+      </div>
+
+      <div class="cart-checkout-card">
+        <div class="cart-checkout-title">
+          <i class="ri-shield-check-line" style="color: var(--primary);"></i>
+          <span>Thông Tin Thanh Toán</span>
+        </div>
+
+        <form id="checkoutSubmitForm">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="checkoutName">Họ và tên người nhận</label>
+            <input type="text" id="checkoutName" class="form-input" placeholder="Ví dụ: Nguyễn Văn A" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="checkoutPhone">Số điện thoại giao hàng</label>
+            <input type="tel" id="checkoutPhone" class="form-input" placeholder="Ví dụ: 0912345678" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="checkoutAddress">Địa chỉ nhận hàng chi tiết</label>
+            <textarea id="checkoutAddress" class="form-textarea" rows="2" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="checkoutPayment">Hình thức thanh toán</label>
+            <select id="checkoutPayment" class="form-select">
+              <option value="cod">Thanh toán khi nhận hàng (COD)</option>
+              <option value="banking">Chuyển khoản Ngân hàng / Quét mã VietQR</option>
+              <option value="vnpay">Ví điện tử VNPAY / MoMo</option>
+            </select>
+          </div>
+
+          <div class="cart-price-breakdown">
+            <div class="cart-breakdown-row">
+              <span>Tạm tính:</span>
+              <span id="summarySubtotal">0 đ</span>
+            </div>
+            <div class="cart-breakdown-row">
+              <span>Phí vận chuyển:</span>
+              <span style="color: var(--success); font-weight: 700;">Miễn phí toàn quốc</span>
+            </div>
+            <div class="cart-breakdown-row total">
+              <span>Tổng thanh toán:</span>
+              <span id="summaryGrandTotal">0 đ</span>
+            </div>
+          </div>
+
+          <button type="submit" id="confirmOrderBtn" class="btn btn-primary btn-lg" style="width: 100%;">
+            <span>Xác Nhận Đặt Hàng</span>
+            <i class="ri-check-double-line"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/cart.js"></script>
+</body>
+</html>
