@@ -1,0 +1,24 @@
+# Environment variables
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Backups & Temporary files
+backups/
+**/backups/
+scratch/
+*.log
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Reports & Presentations
+BaoCao_ThanhPhan_KienTruc/

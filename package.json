@@ -1,0 +1,14 @@
+{
+  "name": "microservices-ecommerce",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:gateway": "node gateway/src/index.js",
+    "start:identity": "node services/identity-service/src/index.js",
+    "start:product": "node services/product-service/src/index.js",
+    "start:order": "node services/order-service/src/index.js",
+    "start:notification": "node services/notification-service/src/index.js",
+    "start": "docker compose up --build",
+    "docker:down": "docker compose down"
+  }
+}

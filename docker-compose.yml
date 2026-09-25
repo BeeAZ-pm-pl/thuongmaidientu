@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  identity-service:
+    build:
+      context: ./services/identity-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-identity-service
+    ports:
+      - "8001:8001"
+    environment:
+      PORT: 8001
+      JWT_SECRET: supersecretjwtkeyecommerce2026
+    volumes:
+      - identity_data:/app/data
+
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-product-service
+    ports:
+      - "8002:8002"
+    environment:
+      PORT: 8002
+    volumes:
+      - product_data:/app/data
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-order-service
+    ports:
+      - "8003:8003"
+    environment:
+      PORT: 8003
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PRODUCT_SERVICE_URL: http://product-service:8002
+    depends_on:
+      - rabbitmq
+    volumes:
+      - order_data:/app/data
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-notification-service
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: 8004
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    volumes:
+      - notification_data:/app/data
+
+  api-gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: ecommerce-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      IDENTITY_SERVICE_URL: http://identity-service:8001
+      PRODUCT_SERVICE_URL: http://product-service:8002
+      ORDER_SERVICE_URL: http://order-service:8003
+      NOTIFICATION_SERVICE_URL: http://notification-service:8004
+    depends_on:
+      - identity-service
+      - product-service
+      - order-service
+      - notification-service
+
+volumes:
+  rabbitmq_data:
+  identity_data:
+  product_data:
+  order_data:
+  notification_data:
