@@ -4,11 +4,13 @@ const path = require('path');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const config = require('./config');
 const loggerMiddleware = require('./middlewares/loggerMiddleware');
+const rateLimiter = require('./middlewares/rateLimiter');
 
 const app = express();
 
 app.use(cors());
 app.use(loggerMiddleware);
+app.use(rateLimiter({ windowMs: 60 * 1000, max: 150 }));
 
 app.get('/api/health', (req, res) => {
   res.json({
