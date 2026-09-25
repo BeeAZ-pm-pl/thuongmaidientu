@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký Tài Khoản | NovaShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+
+  <header class="auth-header">
+    <div class="auth-header-container">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">
+          <i class="ri-shopping-bag-3-fill"></i>
+        </div>
+        <span>NovaShop</span>
+      </a>
+      <a href="/" class="back-home-link">
+        <i class="ri-arrow-left-line"></i>
+        <span>Quay lại Trang Chủ</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="auth-main">
+    <div class="auth-split-wrapper">
+      <div class="auth-showcase-panel">
+        <div>
+          <div class="showcase-badge">
+            <i class="ri-vip-crown-fill"></i>
+            <span>Quyền lợi thành viên NovaShop</span>
+          </div>
+          <h1 class="showcase-headline">
+            Gia Nhập Cộng Đồng <br>Mua Sắm Thông Minh
+          </h1>
+          <p class="showcase-desc">
+            Đăng ký tài khoản ngay hôm nay để nhận voucher giảm giá 100K cho đơn hàng đầu tiên và tích điểm đổi quà không giới hạn.
+          </p>
+
+          <div class="showcase-features">
+            <div class="showcase-feature-item">
+              <div class="showcase-feature-icon">
+                <i class="ri-copper-coin-line"></i>
+              </div>
+              <div class="showcase-feature-text">Tích xu Nova thưởng cho mỗi đơn hàng thành công</div>
+            </div>
+            <div class="showcase-feature-item">
+              <div class="showcase-feature-icon">
+                <i class="ri-percent-line"></i>
+              </div>
+              <div class="showcase-feature-text">Đặc quyền săn deal Flash Sale sớm hơn 30 phút</div>
+            </div>
+            <div class="showcase-feature-item">
+              <div class="showcase-feature-icon">
+                <i class="ri-customer-service-2-line"></i>
+              </div>
+              <div class="showcase-feature-text">Đội ngũ hỗ trợ viên ưu tiên chăm sóc 24/7</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-footer">
+          <i class="ri-verified-badge-fill" style="color: #ffd839;"></i>
+          <span>Bảo mật thông tin khách hàng tuyệt đối theo chuẩn quốc tế</span>
+        </div>
+      </div>
+
+      <div class="auth-form-panel">
+        <h2 class="auth-title">Đăng Ký Tài Khoản</h2>
+        <p class="auth-subtitle">Nhập đầy đủ thông tin để trở thành thành viên chính thức</p>
+
+        <form id="customerRegisterForm" class="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="regName">Họ và tên của bạn</label>
+            <div class="input-with-icon">
+              <i class="ri-user-line input-icon-left"></i>
+              <input type="text" id="regName" class="form-input" placeholder="Ví dụ: Nguyễn Văn A" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regEmail">Địa chỉ Email</label>
+            <div class="input-with-icon">
+              <i class="ri-mail-line input-icon-left"></i>
+              <input type="email" id="regEmail" class="form-input" placeholder="tenban@example.com" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regPassword">Mật khẩu bảo mật</label>
+            <div class="input-with-icon">
+              <i class="ri-lock-line input-icon-left"></i>
+              <input type="password" id="regPassword" class="form-input" placeholder="Tối thiểu 6 ký tự" required>
+              <button type="button" id="toggleRegPasswordBtn" class="password-toggle-btn" aria-label="Hiện mật khẩu">
+                <i id="toggleRegPasswordIcon" class="ri-eye-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regPhone">Số điện thoại liên hệ</label>
+            <div class="input-with-icon">
+              <i class="ri-phone-line input-icon-left"></i>
+              <input type="tel" id="regPhone" class="form-input" placeholder="Ví dụ: 0912345678" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regAddress">Địa chỉ nhận hàng mặc định</label>
+            <div class="input-with-icon">
+              <i class="ri-map-pin-line input-icon-left" style="top: 16px;"></i>
+              <textarea id="regAddress" class="form-textarea" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required></textarea>
+            </div>
+          </div>
+
+          <button type="submit" id="regSubmitBtn" class="auth-submit-btn">
+            <span>Hoàn Tất Đăng Ký</span>
+            <i class="ri-check-line"></i>
+          </button>
+        </form>
+
+        <div class="auth-footer-link">
+          <span>Đã có tài khoản thành viên? </span>
+          <a href="/login">Đăng nhập ngay tại đây</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/register.js"></script>
+</body>
+</html>

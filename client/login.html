@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập Khách Hàng | NovaShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+
+  <header class="auth-header">
+    <div class="auth-header-container">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">
+          <i class="ri-shopping-bag-3-fill"></i>
+        </div>
+        <span>NovaShop</span>
+      </a>
+      <a href="/" class="back-home-link">
+        <i class="ri-arrow-left-line"></i>
+        <span>Quay lại Trang Chủ</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="auth-main">
+    <div class="auth-split-wrapper">
+      <div class="auth-showcase-panel">
+        <div>
+          <div class="showcase-badge">
+            <i class="ri-sparkling-fill"></i>
+            <span>Nền tảng mua sắm tin cậy số 1</span>
+          </div>
+          <h1 class="showcase-headline">
+            Trải Nghiệm Mua Sắm <br>Đỉnh Cao Cùng NovaShop
+          </h1>
+          <p class="showcase-desc">
+            Hàng triệu sản phẩm công nghệ, điện tử và thời trang chính hãng với ưu đãi đặc quyền độc quyền mỗi ngày.
+          </p>
+
+          <div class="showcase-features">
+            <div class="showcase-feature-item">
+              <div class="showcase-feature-icon">
+                <i class="ri-shield-check-line"></i>
+              </div>
+              <div class="showcase-feature-text">100% Sản phẩm chính hãng & Bảo hành điện tử</div>
+            </div>
+            <div class="showcase-feature-item">
+              <div class="showcase-feature-icon">
+                <i class="ri-truck-line"></i>
+              </div>
+              <div class="showcase-feature-text">Giao hàng hỏa tốc trong 2 giờ nội thành</div>
+            </div>
+            <div class="showcase-feature-item">
+              <div class="showcase-feature-icon">
+                <i class="ri-gift-line"></i>
+              </div>
+              <div class="showcase-feature-text">Voucher giảm 100K cho khách hàng thành viên</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-footer">
+          <i class="ri-star-fill" style="color: #ffd839;"></i>
+          <span>Được đánh giá 4.9/5 sao từ hơn 50.000 khách hàng</span>
+        </div>
+      </div>
+
+      <div class="auth-form-panel">
+        <h2 class="auth-title">Đăng Nhập</h2>
+        <p class="auth-subtitle">Vui lòng nhập tài khoản để tiếp tục mua sắm</p>
+
+        <form id="customerLoginForm" class="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email tài khoản</label>
+            <div class="input-with-icon">
+              <i class="ri-mail-line input-icon-left"></i>
+              <input type="email" id="loginEmail" class="form-input" placeholder="nhap.email@example.com" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Mật khẩu</label>
+            <div class="input-with-icon">
+              <i class="ri-lock-line input-icon-left"></i>
+              <input type="password" id="loginPassword" class="form-input" placeholder="Nhập mật khẩu" required>
+              <button type="button" id="togglePasswordBtn" class="password-toggle-btn" aria-label="Hiện mật khẩu">
+                <i id="togglePasswordIcon" class="ri-eye-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" id="loginSubmitBtn" class="auth-submit-btn">
+            <span>Đăng Nhập Ngay</span>
+            <i class="ri-arrow-right-line"></i>
+          </button>
+        </form>
+
+        <div class="auth-footer-link">
+          <span>Chưa có tài khoản thành viên? </span>
+          <a href="/register">Đăng ký ngay tại đây</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/login.js"></script>
+</body>
+</html>
