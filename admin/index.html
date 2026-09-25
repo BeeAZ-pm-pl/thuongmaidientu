@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | NovaShop Quản Trị</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/variables.css">
+  <link rel="stylesheet" href="/admin/css/base.css">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link rel="stylesheet" href="/admin/css/modals.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <div class="brand-icon">
+          <i class="ri-shield-keyhole-fill"></i>
+        </div>
+        <div>
+          <div>NovaAdmin</div>
+          <div style="font-size: 0.6875rem; color: #64748b; font-weight: 500;">Hệ Thống Quản Trị</div>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+        <div class="admin-nav-item active" data-tab="ordersTab">
+          <i class="ri-shopping-cart-2-fill"></i>
+          <span>Quản Lý Đơn Hàng</span>
+        </div>
+        <div class="admin-nav-item" data-tab="productsTab">
+          <i class="ri-store-2-fill"></i>
+          <span>Quản Lý Sản Phẩm</span>
+        </div>
+        <div class="admin-nav-item" data-tab="usersTab">
+          <i class="ri-group-fill"></i>
+          <span>Người Dùng & Phân Quyền</span>
+        </div>
+        <div class="admin-nav-item" data-tab="systemTab">
+          <i class="ri-server-fill"></i>
+          <span>Trạng Thái Hệ Thống</span>
+        </div>
+      </nav>
+
+      <div class="admin-sidebar-footer">
+        <button id="sidebarLogoutBtn" class="btn btn-outline btn-sm" style="width: 100%; border-color: #334155; color: #f87171;">
+          <i class="ri-logout-box-r-line"></i>
+          <span>Đăng Xuất Admin</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="admin-page-title" id="adminHeaderTitle">Quản Lý Đơn Hàng & Doanh Thu</div>
+        <div class="admin-header-actions">
+          <button id="refreshDataBtn" class="btn btn-outline btn-sm">
+            <i class="ri-refresh-line"></i>
+            <span>Làm Mới</span>
+          </button>
+          <div class="user-avatar-circle" style="background: var(--primary);">
+            <i class="ri-admin-line"></i>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-title">Doanh Thu Đã Thu</div>
+              <div id="kpiRevenue" class="kpi-value">0 đ</div>
+            </div>
+            <div class="kpi-icon-box trust-box-2">
+              <i class="ri-money-dollar-circle-line"></i>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-title">Tổng Số Đơn Hàng</div>
+              <div id="kpiOrders" class="kpi-value">0</div>
+            </div>
+            <div class="kpi-icon-box trust-box-1">
+              <i class="ri-shopping-bag-3-line"></i>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-title">Số Sản Phẩm</div>
+              <div id="kpiProducts" class="kpi-value">0</div>
+            </div>
+            <div class="kpi-icon-box trust-box-3">
+              <i class="ri-box-3-line"></i>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-title">Tài Khoản Đăng Ký</div>
+              <div id="kpiUsers" class="kpi-value">0</div>
+            </div>
+            <div class="kpi-icon-box trust-box-4">
+              <i class="ri-user-star-line"></i>
+            </div>
+          </div>
+        </div>
+
+        <section id="ordersTab" class="tab-view active">
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title">Danh Sách Đơn Hàng</div>
+              <div class="panel-actions">
+                <select id="filterOrderStatus" class="form-select" style="width: 180px;">
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="pending">Chờ xử lý</option>
+                  <option value="processing">Đang đóng gói/giao</option>
+                  <option value="completed">Đã hoàn tất</option>
+                  <option value="cancelled">Đã huỷ</option>
+                </select>
+              </div>
+            </div>
+            <div class="data-table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Điện thoại</th>
+                    <th>Tổng tiền</th>
+                    <th>Thanh toán</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="productsTab" class="tab-view" style="display: none;">
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title">Kho Hàng & Sản Phẩm</div>
+              <div class="panel-actions">
+                <button id="openAddProductModalBtn" class="btn btn-primary btn-sm">
+                  <i class="ri-add-line"></i>
+                  <span>Thêm Sản Phẩm Mới</span>
+                </button>
+              </div>
+            </div>
+            <div class="data-table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Sản phẩm</th>
+                    <th>Danh mục</th>
+                    <th>Giá bán</th>
+                    <th>Tồn kho</th>
+                    <th>Đã bán</th>
+                    <th>Đánh giá</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="usersTab" class="tab-view" style="display: none;">
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title">Tài Khoản Người Dùng</div>
+            </div>
+            <div class="data-table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã người dùng</th>
+                    <th>Họ và tên</th>
+                    <th>Tài khoản / Email</th>
+                    <th>Vai trò</th>
+                    <th>Số điện thoại</th>
+                    <th>Địa chỉ</th>
+                    <th>Ngày tạo</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="systemTab" class="tab-view" style="display: none;">
+          <div class="card-panel" style="margin-bottom: 24px;">
+            <div class="panel-header">
+              <div class="panel-title">Hiện Trạng Máy Chủ & Kết Nối Cơ Sở Dữ Liệu MySQL</div>
+            </div>
+            <div style="padding: 24px;">
+              <div class="services-mesh-grid" id="servicesMeshGrid">
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="productModal" class="modal-overlay">
+    <div class="modal-card">
+      <button class="modal-close-btn" data-close-modal="productModal">
+        <i class="ri-close-line"></i>
+      </button>
+      <div class="modal-header">
+        <h3 class="modal-title" id="productModalTitle">Thêm Sản Phẩm Mới</h3>
+      </div>
+      <div class="modal-body">
+        <form id="productForm">
+          <input type="hidden" id="editProductId">
+          <div class="form-group">
+            <label class="form-label" for="prodNameInput">Tên sản phẩm</label>
+            <input type="text" id="prodNameInput" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prodCategorySelect">Danh mục</label>
+            <select id="prodCategorySelect" class="form-select" required>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="prodPriceInput">Giá bán (VND)</label>
+              <input type="number" id="prodPriceInput" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="prodOriginalPriceInput">Giá gốc (VND)</label>
+              <input type="number" id="prodOriginalPriceInput" class="form-input">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="prodStockInput">Số lượng trong kho</label>
+              <input type="number" id="prodStockInput" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="prodRatingInput">Đánh giá (sao)</label>
+              <input type="number" step="0.1" max="5" min="1" id="prodRatingInput" class="form-input" value="5.0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prodImageInput">Đường dẫn hình ảnh (URL)</label>
+            <input type="url" id="prodImageInput" class="form-input" placeholder="https://images.unsplash.com/..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prodDescInput">Mô tả sản phẩm</label>
+            <textarea id="prodDescInput" class="form-textarea" rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 12px;">
+            <span id="saveProductBtnText">Lưu Sản Phẩm</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="orderDetailModal" class="modal-overlay">
+    <div class="modal-card modal-card-lg">
+      <button class="modal-close-btn" data-close-modal="orderDetailModal">
+        <i class="ri-close-line"></i>
+      </button>
+      <div class="modal-header">
+        <h3 class="modal-title" id="orderDetailTitle">Chi Tiết Đơn Hàng</h3>
+      </div>
+      <div class="modal-body" id="orderDetailContent">
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/admin/js/admin.js"></script>
+</body>
+</html>
