@@ -3,17 +3,37 @@ const cors = require('cors');
 const path = require('path');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const config = require('./config');
+const loggerMiddleware = require('./middlewares/loggerMiddleware');
+const rateLimiter = require('./middlewares/rateLimiter');
 
 const app = express();
 
 app.use(cors());
+app.use(loggerMiddleware);
+app.use(rateLimiter({ windowMs: 60 * 1000, max: 150 }));
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const serviceStatuses = {};
+  for (const [name, url] of Object.entries(config.services)) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const pingUrl = name === 'identity' ? `${url}/api/auth/health` : `${url}/health`;
+      const response = await fetch(pingUrl, { signal: controller.signal }).catch(() => null);
+      clearTimeout(timeoutId);
+      serviceStatuses[name] = response && response.ok ? 'ONLINE' : 'UNREACHABLE';
+    } catch {
+      serviceStatuses[name] = 'OFFLINE';
+    }
+  }
+
   res.json({
     service: 'api-gateway',
     status: 'healthy',
-    timestamp: new Date(),
-    services: config.services
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    memoryUsage: process.memoryUsage(),
+    downstream: serviceStatuses
   });
 });
 
