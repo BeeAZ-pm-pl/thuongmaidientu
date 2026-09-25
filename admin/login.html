@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập Quản Trị Hệ Thống</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/variables.css">
+  <link rel="stylesheet" href="/admin/css/base.css">
+  <link rel="stylesheet" href="/admin/css/admin-login.css">
+</head>
+<body class="admin-login-body">
+
+  <div class="admin-login-wrapper">
+    <div class="admin-login-card">
+      <div class="admin-login-header">
+        <div class="admin-login-icon">
+          <i class="ri-shield-user-fill"></i>
+        </div>
+        <h1 class="admin-login-title">Cổng Quản Trị Hệ Thống</h1>
+        <p class="admin-login-subtitle">Vui lòng đăng nhập bằng tài khoản Quản Trị Viên (Admin)</p>
+      </div>
+
+      <form id="adminLoginForm">
+        <div class="admin-input-group">
+          <label class="admin-input-label" for="adminUsername">Tài khoản quản trị</label>
+          <input type="text" id="adminUsername" class="admin-input-field" placeholder="Tên tài khoản admin" required autofocus>
+        </div>
+
+        <div class="admin-input-group">
+          <label class="admin-input-label" for="adminPassword">Mật khẩu</label>
+          <input type="password" id="adminPassword" class="admin-input-field" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="admin-btn-submit" id="adminLoginBtn">
+          <span>Xác Thực & Đăng Nhập</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/admin/js/admin-login.js"></script>
+</body>
+</html>
