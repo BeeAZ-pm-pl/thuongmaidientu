@@ -1,98 +1,152 @@
-# HỆ THỐNG MUA SẮM TRỰC TUYẾN MICROSERVICES (NOVASHOP)
+# HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ PHÂN TÁN NOVASHOP (MICROSERVICES ARCHITECTURE)
 
-> **Đề tài:** Phát triển ứng dụng Web Mua sắm Trực tuyến sử dụng kiến trúc Microservices, API Gateway và Event-Driven Architecture.  
-> **Nền tảng công nghệ:** Node.js • Express.js • RabbitMQ • MySQL • Docker & Docker Compose • Vanilla HTML/CSS/JS.
+> **Đề tài:** Phát triển hệ thống mua sắm trực tuyến toàn diện theo kiến trúc Microservices, API Gateway, kiến trúc hướng sự kiện (Event-Driven Architecture) và Trợ lý ảo tư vấn thông minh Google Gemini AI.  
+> **Nền tảng công nghệ:** Node.js • TypeScript • Express.js • RabbitMQ • MySQL • Docker & Docker Compose • Vanilla HTML5/CSS3.
 
 ---
 
-## 1. TỔNG QUAN HỆ THỐNG
+## 1. TỔNG QUAN KIẾN TRÚC HỆ THỐNG
 
-Dự án áp dụng kiến trúc phần mềm phân tán **Microservices** hiện đại, khắc phục các nhược điểm cố hữu của mô hình Monolithic (nguyên khối). Toàn bộ hệ thống được chia tách thành các dịch vụ độc lập với ranh giới nghiệp vụ (Bounded Context) rõ ràng, giao tiếp qua cả giao thức đồng bộ (Synchronous HTTP REST) và bất đồng bộ (Asynchronous Event-Driven qua RabbitMQ).
+Hệ thống **NovaShop** được thiết kế và xây dựng trên mô hình kiến trúc phân tán **Microservices**, chia tách rõ ràng ranh giới nghiệp vụ (Bounded Context) giữa các phân hệ chức năng độc lập. Giải pháp này giúp hệ thống đạt độ sẵn sàng cao, dễ dàng mở rộng theo chiều ngang (Horizontal Scaling) và tối ưu hóa hiệu năng xử lý.
 
 ```
-                      +-----------------------------+
-                      |         CLIENT LAYER        |
-                      |  (Storefront Web / Admin)   |
-                      +--------------+--------------+
-                                     | HTTP (:8000)
-                                     v
-                      +-----------------------------+
-                      |     API GATEWAY (Proxy)     |
-                      |  Reverse Proxy & Routing    |
-                      +--------------+--------------+
-                                     |
-         +-------------------+-------+-------+--------------------+
-         | HTTP              | HTTP          | HTTP               | HTTP
-         v                   v               v                    v
-+-----------------+ +-----------------+ +-----------------+ +-----------------+
-| IDENTITY-SRV    | | PRODUCT-SRV     | | ORDER-SRV       | | NOTIFICATION-SRV|
-| Port: 8001      | | Port: 8002      | | Port: 8003      | | Port: 8004      |
-| JWT, Auth, User | | Catalog, Stock  | | Orders, Checkout| | Alert, Events   |
-+--------+--------+ +--------+--------+ +--------+--------+ +--------+--------+
-         |                   ^                   |                   ^
-         |                   | Sync REST         | Publish Event     | Consume
-         |                   +--- Deduct Stock --+                   |
-         |                                       v                   |
-         |                              +-----------------+          |
-         |                              | RABBITMQ BROKER |----------+
-         |                              | orders_queue    |
-         |                              +-----------------+
-         v                                       v
-+-----------------------------------------------------------------------------+
-|                          DATABASE LAYER (MySQL)                             |
-|                        Cơ sở dữ liệu: ecommerce_db                          |
-+-----------------------------------------------------------------------------+
+                              +---------------------------------------+
+                              |              CLIENT LAYER             |
+                              |  - Storefront Web SPA (Khách hàng)    |
+                              |  - Admin Dashboard Portal (Quản trị)  |
+                              +-------------------+-------------------+
+                                                  | HTTP (:8000)
+                                                  v
+                              +---------------------------------------+
+                              |          API GATEWAY (Proxy)          |
+                              |  - Reverse Proxy & URL Dispatcher     |
+                              |  - Rate Limiting & Latency Tracker    |
+                              |  - Centralized Health Monitoring      |
+                              +-------------------+-------------------+
+                                                  |
+                 +-------------------+------------+-----------+--------------------+
+                 | HTTP              | HTTP                   | HTTP               | HTTP
+                 v                   v                        v                    v
+        +-----------------+ +-----------------+      +-----------------+ +-----------------+
+        | IDENTITY-SRV    | | PRODUCT-SRV     |      | ORDER-SRV       | | NOTIFICATION-SRV|
+        | Port: 8001      | | Port: 8002      |      | Port: 8003      | | Port: 8004      |
+        | JWT, Auth, User | | Catalog, Stock  |      | Orders, Checkout| | Alert, Events   |
+        +--------+--------+ +--------+--------+      +--------+--------+ +--------+--------+
+                 |                   ^                        |                   ^
+                 |                   | Sync REST              | Publish Event     | Consume
+                 |                   +--- Deduct Stock -------+                   |
+                 |                                            v                   |
+                 |                                   +-----------------+          |
+                 |                                   | RABBITMQ BROKER |----------+
+                 |                                   | orders_queue    |
+                 |                                   +-----------------+
+                 v                                            v
++------------------------------------------------------------------------------------------+
+|                                 DATABASE LAYER (MySQL)                                   |
+|                               Cơ sở dữ liệu: ecommerce_db                                |
++------------------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## 2. PHÂN CÔNG NHIỆM VỤ THÀNH VIÊN (NHÓM 2)
 
-| STT | Thành viên | Vai trò & Nhiệm vụ chính | Nhánh tính năng |
+| STT | Thành viên | Vai trò & Trách nhiệm chính | Nhánh tính năng |
 | :---: | :--- | :--- | :--- |
 | **1** | **Nguyễn Công Đạt** *(Nhóm trưởng)* | Thiết kế kiến trúc tổng thể, API Gateway, Identity Service, Docker Compose & Quản lý CSDL | `feature/architecture-gateway-identity` |
-| **2** | **Hoàng Minh Hiếu** | Phát triển Product Microservice, quản lý danh mục & kho, xây dựng giao diện Storefront Web | `feature/product-client` |
+| **2** | **Hoàng Minh Hiếu** | Phát triển Product Microservice, quản lý danh mục & kho hàng, xây dựng giao diện Storefront Web | `feature/product-client` |
 | **3** | **Nguyễn Văn Hoàng** | Phát triển Order Microservice, quy trình đặt hàng, tích hợp RabbitMQ Producer & giao diện Admin Dashboard | `feature/order-admin` |
-| **4** | **Nguyễn Tô Trung Sơn** | Phát triển Notification Microservice, tích hợp RabbitMQ Consumer nhận sự kiện tự động | `feature/notification-service` |
+| **4** | **Nguyễn Tô Trung Sơn** | Phát triển Notification Microservice, tích hợp RabbitMQ Consumer nhận và phân phối sự kiện | `feature/notification-service` |
 
 ---
 
-## 3. CÁC THÀNH PHẦN VÀ CỔNG TRUY CẬP (PORTS)
+## 3. THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG TRỰC QUAN (UI/UX DESIGN)
 
-| Dịch vụ / Thành phần | Cổng (Port) | Đường dẫn truy cập / Mục đích |
+Hệ thống được phát triển theo tiêu chuẩn giao diện hiện đại, trực quan, tối ưu trải nghiệm tương tác (UX) và thân thiện với mọi kích cỡ thiết bị.
+
+### 3.1. Giao diện Cửa hàng Dành cho Khách Mua (Storefront Web - `http://localhost:8000`)
+* **Thanh Tiện Ích Trên Cùng (Top Bar)**:
+  * Bên trái: Nhãn chứng nhận *"NovaShop Chính Hãng 100%"*, liên kết tải ứng dụng di động, kết nối mạng xã hội.
+  * Bên phải: Mục *Thông Báo*, liên kết *Hỗ Trợ* (dẫn tới Trung tâm trợ giúp), cụm điều hướng tài khoản thành viên (*Đăng Ký*, *Đăng Nhập*, *Đơn Mua*, *Đăng Xuất*).
+* **Thanh Header Chính (Main Navigation)**:
+  * Logo thương hiệu nhận diện cao.
+  * Thanh tìm kiếm trung tâm đa năng: Hỗ trợ tự động hiển thị gợi ý thông minh (Live Search Suggestions) kèm nhãn từ khóa nổi bật (Hot Keywords).
+  * Nút giỏ hàng chuyên dụng có hiển thị số lượng badge phản hồi theo thời gian thực.
+* **Khu Vực Flash Sale Giờ Vàng**:
+  * Bộ đồng hồ đếm ngược tự động (Countdown Timer).
+  * Thẻ sản phẩm hiển thị tỷ lệ giảm giá, thanh tiến độ số lượng đã bán trực quan.
+  * Nút mua ngay và nút thêm giỏ hàng được căn chỉnh cân đối, chuẩn tỷ lệ bố cục.
+* **Danh Mục Sản Phẩm & Bộ Lọc Nhanh**:
+  * Điều hướng theo tab danh mục (Điện thoại, Laptop, Phụ kiện, Thiết bị số).
+  * Bộ lọc sắp xếp sản phẩm theo giá thành (Tăng dần / Giảm dần) và thời gian ra mắt mới nhất.
+* **Modal Chi Tiết Sản Phẩm Đa Chiều (Product Detail Modal)**:
+  * Bộ sưu tập hình ảnh sắc nét.
+  * Lựa chọn phiên bản / màu sắc / dung lượng tương tác; giá thành tự động cập nhật linh hoạt theo lựa chọn của khách.
+  * Bảng thông số kỹ thuật chi tiết và chính sách cam kết chất lượng.
+* **Trang Giỏ Hàng & Thanh Toán (`/cart`)**:
+  * Kiểm tra danh mục sản phẩm đã chọn, điều chỉnh số lượng, áp dụng voucher khuyến mãi.
+  * Tùy chọn phương thức thanh toán thuận tiện: Thanh toán khi nhận hàng (COD) hoặc Chuyển khoản ngân hàng.
+* **Trang Tra Cứu Đơn Hàng (`/orders`)**:
+  * Quản lý toàn bộ lịch sử đơn mua, hiển thị mã đơn, ngày tạo, tổng tiền và trạng thái xử lý đơn hàng.
+* **Hệ Thống Trang Thông Tin Chân Trang (Footer SPA Pages)**:
+  * Toàn bộ 7 trang thông tin được định tuyến SPA mượt mà không tải lại trang:
+    * `/about`: Giới thiệu công ty, câu chuyện thương hiệu và tầm nhìn sứ mệnh.
+    * `/careers`: Cơ hội nghề nghiệp, chính sách đãi ngộ và thông tin ứng tuyển 4 vị trí kỹ thuật & vận hành.
+    * `/terms`: Quy chế hoạt động, điều khoản dịch vụ và cơ chế bảo đảm quyền lợi người tiêu dùng.
+    * `/privacy`: Chính sách bảo vệ dữ liệu cá nhân theo chuẩn an ninh mạng.
+    * `/help`: Trung tâm trợ giúp khách hàng & tổng hợp giải đáp câu hỏi thường gặp (FAQ).
+    * `/guide`: Hướng dẫn quy trình 4 bước mua sắm và lưu ý đồng kiểm bưu kiện an toàn.
+    * `/shipping`: Bảng cước phí vận chuyển, cam kết thời gian giao hàng và quy cách đóng gói chống sốc.
+* **Trợ Lý Ảo Trực Tuyến NovaBot AI**:
+  * Cửa sổ Live Chat tương tác trực tiếp tích hợp mô hình **Google Gemini AI**.
+  * Hỗ trợ tìm kiếm, so sánh tính năng và đưa ra gợi ý sản phẩm phù hợp với nhu cầu người mua.
+
+### 3.2. Cổng Quản Trị Dành Cho Chủ Cửa Hàng (Admin Portal - `http://localhost:8000/admin`)
+* **Trang Đăng Nhập Quản Trị (`/admin/login`)**: Thiết kế Dark Mode hiện đại, hiệu ứng kính mờ (Glassmorphism), cơ chế xác thực JWT an toàn.
+* **Bảng Điều Khiển Tổng Quan (Dashboard)**: Thống kê tức thời doanh thu, tổng số đơn mua, lượng khách hàng và các chỉ số kinh doanh quan trọng.
+* **Quản Lý Sản Phẩm**: Thêm mới, chỉnh sửa thông tin, giá bán, số lượng tồn kho và cập nhật hình ảnh.
+* **Quản Lý Đơn Hàng**: Theo dõi trạng thái các đơn hàng (*Chờ xử lý, Đang giao, Đã hoàn tất, Đã hủy*).
+* **Quản Lý Danh Mục**: Phân loại và cấu trúc lại hệ thống danh mục hàng hóa.
+
+---
+
+## 4. CÁC THÀNH PHẦN VÀ CỔNG TRUY CẬP (PORTS & SERVICES)
+
+| Thành phần / Dịch vụ | Cổng (Port) | Địa chỉ truy cập / Vai trò |
 | :--- | :---: | :--- |
-| **API Gateway** | `8000` | Điểm tiếp nhận tập trung (Reverse Proxy tới các service con) |
-| • Storefront Web (Khách mua) | `8000` | `http://localhost:8000` |
-| • Admin Dashboard (Quản trị) | `8000` | `http://localhost:8000/admin` |
-| **Identity Service** | `8001` | Xác thực người dùng, băm mật khẩu bcrypt, cấp phát JWT |
-| **Product Service** | `8002` | Quản lý danh mục, sản phẩm, biến thể và trừ tồn kho |
-| **Order Service** | `8003` | Tiếp nhận đơn hàng, tính tiền, phát sự kiện vào RabbitMQ |
-| **Notification Service** | `8004` | Lắng nghe hàng đợi tin nhắn, tạo thông báo hệ thống |
-| **Chat & AI Service** | `8005` | Hỗ trợ Live Chat trực tuyến, tích hợp Google Gemini AI tư vấn sản phẩm |
-| **RabbitMQ Management** | `15672` | `http://localhost:15672` (User/Pass: `guest` / `guest`) |
-| **MySQL Server** | `3306` | CSDL tập trung / độc lập (`ecommerce_db`) |
+| **API Gateway** | `8000` | Điểm tiếp nhận trung tâm, định tuyến Reverse Proxy tới các microservices |
+| • Cửa hàng trực tuyến (Storefront) | `8000` | `http://localhost:8000` |
+| • Cổng quản trị (Admin Portal) | `8000` | `http://localhost:8000/admin` |
+| • Đăng nhập quản trị viên | `8000` | `http://localhost:8000/admin/login` |
+| **Identity Service** | `8001` | Đăng ký, đăng nhập, băm mật khẩu bcrypt, quản lý tài khoản và cấp phát JWT |
+| **Product Service** | `8002` | Quản lý danh mục, sản phẩm, phiên bản và trừ tồn kho thời gian thực |
+| **Order Service** | `8003` | Tiếp nhận đơn đặt hàng, tính toán giá trị, gửi sự kiện vào RabbitMQ |
+| **Notification Service** | `8004` | Tiêu thụ sự kiện từ RabbitMQ, ghi nhận thông báo cho quản trị viên |
+| **Chat & AI Service** | `8005` | Quản lý phiên chat, tích hợp Google Gemini AI tư vấn sản phẩm thông minh |
+| **RabbitMQ Management** | `15672` | `http://localhost:15672` (Tài khoản: `guest` / `guest`) |
+| **MySQL Database Server** | `3306` | Lưu trữ cơ sở dữ liệu quan hệ tập trung (`ecommerce_db`) |
 
 ---
 
-## 4. HƯỚNG DẪN KHỞI TẠO CƠ SỞ DỮ LIỆU (MYSQL)
+## 5. HƯỚNG DẪN KHỞI TẠO CƠ SỞ DỮ LIỆU (MYSQL)
 
-Dự án cung cấp sẵn file [`database.sql`](database.sql) chứa toàn bộ cấu trúc bảng và dữ liệu mẫu danh mục/sản phẩm:
+Dự án cung cấp tệp khởi tạo [`database.sql`](database.sql) bao gồm toàn bộ lược đồ bảng, khóa ngoại và dữ liệu sản phẩm/danh mục mẫu chuẩn:
 
 ### Cách nhập (Import) dữ liệu:
-1. Mở công cụ quản lý MySQL của bạn (**phpMyAdmin**, **MySQL Workbench**, **DBeaver**, hoặc **Navicat**).
-2. Tạo mới hoặc chọn cơ sở dữ liệu `ecommerce_db`:
+1. Mở công cụ quản lý cơ sở dữ liệu MySQL (**phpMyAdmin**, **MySQL Workbench**, **DBeaver**, hoặc **Navicat**).
+2. Tạo mới hoặc lựa chọn cơ sở dữ liệu `ecommerce_db`:
    ```sql
    CREATE DATABASE IF NOT EXISTS `ecommerce_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    USE `ecommerce_db`;
    ```
-3. Nhập trực tiếp toàn bộ nội dung trong file **[`database.sql`](database.sql)** hoặc dùng lệnh dòng lệnh:
+3. Nhập trực tiếp toàn bộ nội dung trong tệp **[`database.sql`](database.sql)** hoặc sử dụng câu lệnh terminal:
    ```bash
    mysql -u root -p ecommerce_db < database.sql
    ```
 
-### Tài khoản đăng nhập thử nghiệm có sẵn:
+### Tài khoản thử nghiệm có sẵn:
 * **Tài khoản Quản trị viên (Admin):**
-  * Email: `admin@shop.com` (hoặc username `admin`)
+  * Email: `admin@shop.com` (hoặc tên đăng nhập `admin`)
   * Mật khẩu: `123456`
 * **Tài khoản Khách hàng (Customer):**
   * Email: `customer@shop.com`
@@ -100,59 +154,95 @@ Dự án cung cấp sẵn file [`database.sql`](database.sql) chứa toàn bộ 
 
 ---
 
-## 5. HƯỚNG DẪN CÀI ĐẶT VÀ KHỞI CHẠY
+## 6. HƯỚNG DẪN CÀI ĐẶT VÀ KHỞI CHẠY DỰ ÁN
 
-### Cách 1: Khởi chạy bằng Docker Compose (Khuyên dùng - Chuẩn đồ án)
-Yêu cầu: Máy tính đã cài đặt và bật **Docker Desktop**.
+### Cách 1: Khởi chạy siêu tốc bằng Node.js Runner (Khuyên dùng khi phát triển cục bộ)
+Yêu cầu: Máy đã cài **Node.js (>= 18)** và đang chạy dịch vụ **MySQL** (qua XAMPP, Laragon hoặc Docker).
 
 ```bash
-# 1. Di chuyển vào thư mục dự án
+# 1. Cài đặt các gói phụ thuộc (nếu chưa cài)
+npm install
+
+# 2. Biên dịch toàn bộ TypeScript sang JavaScript chuẩn
+npm run build
+
+# 3. Khởi chạy đồng bộ tất cả 6 microservices và API Gateway chỉ với 1 lệnh
+node start_all.js
+```
+> Trình điều phối `start_all.js` sẽ tự động mở đồng thời toàn bộ 6 dịch vụ, phân biệt màu sắc console trực quan và tự động dọn dẹp tiến trình khi bạn nhấn `Ctrl + C`.
+
+---
+
+### Cách 2: Khởi chạy bằng Docker Compose (Môi trường Container hóa)
+Yêu cầu: Máy tính đã cài đặt và khởi động sẵn **Docker Desktop**.
+
+```bash
+# 1. Di chuyển vào thư mục gốc của dự án
 cd thuongmaidientu
 
-# 2. Khởi chạy toàn bộ 6 container (RabbitMQ + Gateway + 4 Services)
+# 2. Xây dựng image và kích hoạt toàn bộ container
 docker compose up --build
 ```
-> Khi các container đã báo `ready`, mở trình duyệt truy cập ngay:
-> * Khách hàng mua sắm: **`http://localhost:8000`**
-> * Quản trị viên: **`http://localhost:8000/admin`**
-> * Để dừng hệ thống: Bấm `Ctrl + C` hoặc chạy `docker compose down`.
+> Khi các container thông báo trạng thái `ready`, mở trình duyệt truy cập:
+> * Giao diện mua sắm: **`http://localhost:8000`**
+> * Giao diện quản trị: **`http://localhost:8000/admin`**
+> * Để dừng toàn bộ container: Nhấn tổ hợp phím `Ctrl + C` hoặc chạy `docker compose down`.
 
 ---
 
-### Cách 2: Khởi chạy thủ công từng Service bằng Node.js (Local Dev)
-Yêu cầu: Đã cài **Node.js (>= 18)** và mở **MySQL** (XAMPP).
-
+### Cách 3: Khởi chạy độc lập từng Service thủ công
 ```bash
-# Khởi chạy API Gateway
+# 1. API Gateway
 cd gateway && npm install && node src/index.js
 
-# Khởi chạy Identity Service
+# 2. Identity Service
 cd services/identity-service && npm install && node src/index.js
 
-# Khởi chạy Product Service
+# 3. Product Service
 cd services/product-service && npm install && node src/index.js
 
-# Khởi chạy Order Service
+# 4. Order Service
 cd services/order-service && npm install && node src/index.js
 
-# Khởi chạy Notification Service
+# 5. Notification Service
 cd services/notification-service && npm install && node src/index.js
 
-# Khởi chạy Chat & AI Service
-cd services/chat-service && npm install && node src/index.js
+# 6. Chat & AI Service
+cd services/chat-service && npm install && node dist/index.js
 ```
 
 ---
 
-## 6. QUY TRÌNH NGHIỆP VỤ CỐT LÕI (EVENT-DRIVEN WORKFLOW)
+## 7. QUY TRÌNH XỬ LÝ NGHIỆP VỤ HƯỚNG SỰ KIỆN (EVENT-DRIVEN WORKFLOW)
 
-1. **Khách hàng đặt hàng (Checkout)**: Trình duyệt gửi thông tin giỏ hàng lên `API Gateway:8000` -> chuyển tiếp tới `Order Service:8003`.
-2. **Kiểm tra & Trừ tồn kho đồng bộ (Sync HTTP)**: `Order Service` gọi ngay lập tức sang `Product Service:8002` (`POST /api/products/deduct-stock`) để kiểm tra số lượng và trừ kho ngay lập tức, triệt tiêu hoàn toàn nguy cơ bán vượt tồn kho (Overselling).
-3. **Lưu đơn & Bắn sự kiện (Asynchronous Event)**: `Order Service` lưu đơn hàng với trạng thái `pending`, đồng thời phát ngay một thông điệp sự kiện `order.created` vào hàng đợi `orders_queue` trên **RabbitMQ Broker**.
-4. **Phản hồi tức thì**: `Order Service` trả kết quả thành công ngay cho người dùng mà không cần chờ tác vụ gửi email/thông báo (Non-blocking).
-5. **Tiêu thụ sự kiện (Event Consumer)**: `Notification Service:8004` lắng nghe từ RabbitMQ, bóc tách dữ liệu sự kiện để ghi nhận thông báo cho Admin trên bảng điều khiển.
+```
+[Khách Hàng Checkout] 
+         │ (HTTP POST /api/orders)
+         ▼
+[API Gateway:8000]
+         │ (Reverse Proxy)
+         ▼
+[Order Service:8003] ──(Sync HTTP POST /deduct-stock)──> [Product Service:8002]
+         │                                                      │
+         │ (Lưu đơn 'pending')                                  ▼
+         │                                            [Trừ Tồn Kho CSDL]
+         ▼
+[Publish Event: 'order.created']
+         │
+         ▼
+[RabbitMQ Broker: orders_queue]
+         │
+         ▼ (Async Consume)
+[Notification Service:8004] ──> [Ghi Nhận Thông Báo Quản Trị Hệ Thống]
+```
+
+1. **Khách hàng xác nhận đơn mua**: Trình duyệt gửi payload đơn hàng lên `API Gateway:8000` và chuyển tiếp đến `Order Service:8003`.
+2. **Kiểm tra và trừ tồn kho tức thời (Sync HTTP)**: `Order Service` gửi yêu cầu đồng bộ trực tiếp sang `Product Service:8002` (`POST /api/products/deduct-stock`). Số lượng sản phẩm được khấu trừ ngay lập tức tại CSDL, ngăn chặn triệt để tình trạng bán vượt số lượng thực tế (Overselling).
+3. **Lưu trữ đơn hàng & Phát hành sự kiện (Asynchronous Event)**: `Order Service` ghi nhận đơn vào bảng `orders` với trạng thái `pending`, đồng thời phát ngay một thông điệp sự kiện `order.created` vào hàng đợi `orders_queue` trên **RabbitMQ Broker**.
+4. **Phản hồi trải nghiệm người dùng nhanh chóng**: `Order Service` trả kết quả thành công về cho khách hàng mà không cần chờ đợi các tác vụ phụ trợ (Non-blocking I/O).
+5. **Tiêu thụ sự kiện tự động (Event Consumer)**: `Notification Service:8004` liên tục lắng nghe hàng đợi trên RabbitMQ, trích xuất dữ liệu đơn hàng và kích hoạt thông báo hệ thống trên bảng điều khiển Quản trị viên.
 
 ---
 
-## 7. GIẤY PHÉP & BẢN QUYỀN
-Đồ án thuộc về **Nhóm 2 - Môn học Thương Mại Điện Tử**. Mọi mã nguồn được thiết kế phục vụ mục đích học tập và nghiên cứu kiến trúc phần mềm phân tán.
+## 8. BẢN QUYỀN & MỤC ĐÍCH SỬ DỤNG
+Dự án được xây dựng và hoàn thiện bởi **Nhóm 2 - Học phần Thương Mại Điện Tử**. Toàn bộ mã nguồn phục vụ mục đích nghiên cứu, học tập và ứng dụng thực tiễn kiến trúc hệ thống phần mềm phân tán hiện đại.
