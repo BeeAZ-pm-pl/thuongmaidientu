@@ -189,11 +189,61 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    const updated = await userModel.updateProfile(req.user.id, { name, phone, address });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    const { password, ...safeUser } = updated;
+    return res.json({ success: true, message: 'Cập nhật thông tin thành công', data: safeUser });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ', error: error.message });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mật khẩu cũ và mật khẩu mới' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có tối thiểu 6 ký tự' });
+    }
+
+    const user = await userModel.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không chính xác' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await userModel.updatePassword(req.user.id, hashedNewPassword);
+
+    return res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ', error: error.message });
+  }
+};
+
+const healthCheck = (req, res) => {
+  res.json({ service: 'identity-service', status: 'healthy', timestamp: new Date() });
+};
+
 module.exports = {
   register,
   login,
   adminLogin,
   verifyAdmin,
   getMe,
-  getAllUsers
+  getAllUsers,
+  updateProfile,
+  changePassword,
+  healthCheck
 };

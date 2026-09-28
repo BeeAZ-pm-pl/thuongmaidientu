@@ -112,10 +112,27 @@ const getAllUsers = async () => {
   return rows;
 };
 
+const updateProfile = async (id, { name, phone, address }) => {
+  const db = await initDb();
+  await db.query(
+    'UPDATE users SET name = COALESCE(?, name), phone = COALESCE(?, phone), address = COALESCE(?, address) WHERE id = ?',
+    [name || null, phone || null, address || null, id]
+  );
+  return findById(id);
+};
+
+const updatePassword = async (id, newHashedPassword) => {
+  const db = await initDb();
+  await db.query('UPDATE users SET password = ? WHERE id = ?', [newHashedPassword, id]);
+  return true;
+};
+
 module.exports = {
   initDb,
   findByEmail,
   findById,
   create,
-  getAllUsers
+  getAllUsers,
+  updateProfile,
+  updatePassword
 };

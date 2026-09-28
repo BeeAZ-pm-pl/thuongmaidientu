@@ -2,21 +2,14 @@
   "name": "api-gateway",
   "version": "1.0.0",
   "private": true,
-  "main": "dist/index.js",
+  "main": "src/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.3"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.11.24",
-    "typescript": "^5.3.3"
   }
 }

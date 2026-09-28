@@ -1,19 +1,41 @@
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { createProxyMiddleware } from 'http-proxy-middleware';
-import config from './config';
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const config = require('./config');
+const loggerMiddleware = require('./middlewares/loggerMiddleware');
+const rateLimiter = require('./middlewares/rateLimiter');
 
 const app = express();
 
 app.use(cors());
+app.use(loggerMiddleware);
+app.use(rateLimiter({ windowMs: 60 * 1000, max: 150 }));
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const serviceStatuses = {};
+  for (const [name, url] of Object.entries(config.services)) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const pingUrl = name === 'identity'
+        ? `${url}/api/auth/health`
+        : (name === 'chat' ? `${url}/api/chat/health` : `${url}/health`);
+      const response = await fetch(pingUrl, { signal: controller.signal }).catch(() => null);
+      clearTimeout(timeoutId);
+      serviceStatuses[name] = response && response.ok ? 'ONLINE' : 'UNREACHABLE';
+    } catch {
+      serviceStatuses[name] = 'OFFLINE';
+    }
+  }
+
   res.json({
     service: 'api-gateway',
     status: 'healthy',
-    timestamp: new Date(),
-    services: config.services
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    memoryUsage: process.memoryUsage(),
+    downstream: serviceStatuses
   });
 });
 
@@ -60,7 +82,7 @@ app.use(
 app.use('/admin/css', express.static(path.join(__dirname, '../../admin/css')));
 app.use('/admin/js', express.static(path.join(__dirname, '../../admin/js')));
 
-const getAdminShell = (): string => `<!DOCTYPE html>
+const getAdminShell = () => `<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -83,7 +105,7 @@ const getAdminShell = (): string => `<!DOCTYPE html>
 </body>
 </html>`;
 
-const getClientShell = (): string => `<!DOCTYPE html>
+const getClientShell = () => `<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -123,4 +145,4 @@ app.listen(config.port, () => {
   console.log(`API Gateway is running on port ${config.port}`);
 });
 
-export default app;
+module.exports = app;
