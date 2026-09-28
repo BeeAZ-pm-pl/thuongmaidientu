@@ -197,7 +197,7 @@ const renderChatWidgetTemplate = () => {
         <span class="chat-launcher-badge"></span>
     </button>
 
-    <div id="chatWidgetWindow" class="chat-widget-window ${state.chatOpen ? 'open' : ''}">
+    <div id="chatWidgetWindow" class="chat-widget-window ${state.chatOpen ? 'active' : ''}">
         <div class="chat-header">
             <div class="chat-header-info">
                 <div class="chat-avatar-box">
@@ -265,7 +265,7 @@ const renderStorefrontView = () => {
                             <span class="hero-highlight">Mua Sắm Đẳng Cấp</span>
                         </h1>
                         <p class="hero-subtitle">
-                            Khám phá hàng ngàn sản phẩm công nghệ, thời trang và gia dụng chính hãng với ưu đãi tốt nhất mỗi ngày.
+                            Hệ thống thương mại điện tử phân tán thế hệ mới trên nền tảng Microservices và API Gateway tốc độ cao.
                         </p>
                         <div class="hero-actions">
                             <a href="#productsSection" class="btn btn-primary btn-lg">
@@ -1074,13 +1074,13 @@ const renderCategories = () => {
         return;
     const allCat = [{ id: 'cat_all', name: 'Tất Cả Sản Phẩm' }, ...state.categories.filter(c => c.id !== 'cat_all')];
     tabsContainer.innerHTML = allCat.map((cat) => `
-        <button class="category-tab ${state.activeCategory === cat.id ? 'active' : ''}" data-cat-id="${cat.id}" type="button">
+        <button class="category-pill ${state.activeCategory === cat.id ? 'active' : ''}" data-cat-id="${cat.id}" type="button">
             <span>${cat.name}</span>
         </button>
     `).join('');
-    tabsContainer.querySelectorAll('.category-tab').forEach((tab) => {
+    tabsContainer.querySelectorAll('.category-pill').forEach((tab) => {
         tab.addEventListener('click', () => {
-            tabsContainer.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            tabsContainer.querySelectorAll('.category-pill').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             state.activeCategory = tab.getAttribute('data-cat-id') || 'cat_all';
             fetchProducts();
@@ -1172,46 +1172,68 @@ const renderProductsGrid = () => {
     }
     gridEl.innerHTML = state.products.map((prod) => {
         const discountBadge = prod.originalPrice && prod.originalPrice > prod.price
-            ? `<div class="product-badge badge-sale">-${Math.round((1 - prod.price / prod.originalPrice) * 100)}%</div>`
-            : (prod.isFlashSale ? `<div class="product-badge badge-flash"><i class="ri-flashlight-fill"></i> Flash Sale</div>` : '');
+            ? `<span class="badge badge-sale">-${Math.round((1 - prod.price / prod.originalPrice) * 100)}%</span>`
+            : (prod.isFlashSale ? `<span class="badge badge-primary"><i class="ri-flashlight-fill"></i> Flash Sale</span>` : '');
         return `
-        <div class="product-card" data-product-id="${prod.id}">
-            <div class="product-thumb-wrapper">
-                <img src="${prod.imageUrl}" alt="${prod.name}" class="product-thumb" loading="lazy">
-                ${discountBadge}
-                <div class="product-actions-overlay">
-                    <button class="action-btn-pill quickview-trigger" data-id="${prod.id}" type="button">
-                        <i class="ri-eye-line"></i> Xem Nhanh
+        <div class="product-card" data-id="${prod.id}">
+            <div class="card-media">
+                <img src="${prod.imageUrl}" alt="${prod.name}" class="card-image" loading="lazy">
+                <div class="card-badge-container">
+                    ${discountBadge}
+                </div>
+                <div class="card-quick-actions">
+                    <button class="action-btn-circle quickview-trigger" data-id="${prod.id}" title="Xem nhanh" type="button">
+                        <i class="ri-eye-line"></i>
                     </button>
                 </div>
             </div>
-            <div class="product-info-wrap">
-                <h3 class="product-title" title="${prod.name}">${prod.name}</h3>
-                <div class="product-pricing">
-                    <span class="product-curr-price">${formatPrice(prod.price)}</span>
-                    ${prod.originalPrice ? `<span class="product-old-price">${formatPrice(prod.originalPrice)}</span>` : ''}
-                </div>
-                <div class="product-meta-row">
-                    <div class="product-rating-box">
-                        <i class="ri-star-fill star-icon"></i>
+            <div class="card-body">
+                <div class="card-category">${prod.categoryName || prod.category}</div>
+                <h3 class="card-title" title="${prod.name}">${prod.name}</h3>
+                <div class="card-meta">
+                    <div class="rating-badge">
+                        <i class="ri-star-fill"></i>
                         <span>${prod.rating || '5.0'}</span>
                     </div>
-                    <div class="product-sold-text">Đã bán ${prod.sold || 0}</div>
+                    <span class="sold-text">• Đã bán ${prod.sold || prod.soldCount || 0}</span>
                 </div>
-                <button class="btn-buy-now add-to-cart-direct-btn" data-id="${prod.id}" type="button">
-                    <i class="ri-shopping-cart-2-line"></i> Thêm vào giỏ
-                </button>
+                <div class="card-footer">
+                    <div class="price-wrapper">
+                        <div class="current-price">${formatPrice(prod.price)}</div>
+                        ${prod.originalPrice ? `<div class="original-price">${formatPrice(prod.originalPrice)}</div>` : ''}
+                    </div>
+                    <div class="card-actions-group">
+                        <button class="btn-card-cart add-to-cart-direct-btn" data-id="${prod.id}" title="Thêm vào giỏ" type="button">
+                            <i class="ri-shopping-cart-line"></i>
+                        </button>
+                        <button class="btn-card-buy buy-now-direct-btn" data-id="${prod.id}" type="button">
+                            <span>Mua Ngay</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
         `;
     }).join('');
+    gridEl.querySelectorAll('.product-card').forEach((card) => {
+        card.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.closest('.add-to-cart-direct-btn') || target.closest('.buy-now-direct-btn')) {
+                return;
+            }
+            const id = card.getAttribute('data-id');
+            const found = state.products.find(p => p.id.toString() === id?.toString());
+            if (found)
+                openShopeeDetail(found);
+        });
+    });
     gridEl.querySelectorAll('.quickview-trigger').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const id = btn.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openQuickview(found);
+                openShopeeDetail(found);
         });
     });
     gridEl.querySelectorAll('.add-to-cart-direct-btn').forEach((btn) => {
@@ -1221,6 +1243,17 @@ const renderProductsGrid = () => {
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found) {
                 addItemToCart(found, 1);
+            }
+        });
+    });
+    gridEl.querySelectorAll('.buy-now-direct-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            const found = state.products.find(p => p.id.toString() === id?.toString());
+            if (found) {
+                addItemToCart(found, 1);
+                navigate('/cart');
             }
         });
     });
@@ -1234,28 +1267,69 @@ const renderFlashSaleGrid = () => {
         gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 20px;">Đang cập nhật các deal chớp nhoáng...</div>`;
         return;
     }
-    gridEl.innerHTML = flashProducts.map((prod) => `
-        <div class="flash-sale-card" data-id="${prod.id}">
-            <div class="flash-thumb-box">
-                <img src="${prod.imageUrl}" alt="${prod.name}" class="flash-thumb">
-                <div class="flash-discount-tag">HOT</div>
-            </div>
-            <div class="flash-body">
-                <div class="flash-item-name">${prod.name}</div>
-                <div class="flash-item-price">${formatPrice(prod.price)}</div>
-                <div class="flash-progress-track">
-                    <div class="flash-progress-bar" style="width: 75%;"></div>
+    gridEl.innerHTML = flashProducts.map((prod) => {
+        const discount = prod.flashSaleDiscount || (prod.originalPrice ? Math.round((1 - prod.price / prod.originalPrice) * 100) : 25);
+        const soldCount = prod.sold || prod.soldCount || 18;
+        return `
+        <div class="flash-card" data-id="${prod.id}">
+            <div class="flash-card-media">
+                <img src="${prod.imageUrl}" alt="${prod.name}" loading="lazy">
+                <div class="flash-discount-tag">
+                    <span>-${discount}%</span>
+                    <span style="font-size: 0.6rem; font-weight: 600;">GIẢM</span>
                 </div>
-                <div class="flash-stock-label">ĐÃ BÁN ${prod.sold || 18} MÓN</div>
+            </div>
+            <div class="flash-card-body">
+                <div class="flash-card-price">${formatPrice(prod.price)}</div>
+                <div class="flash-card-original">${formatPrice(prod.originalPrice || prod.price * 1.3)}</div>
+                <div class="flash-progress-wrapper">
+                    <div class="flash-progress-bar" style="width: 70%;"></div>
+                    <div class="flash-progress-text">
+                        <i class="ri-fire-fill" style="color: #ffd839;"></i> ĐÃ BÁN ${soldCount}
+                    </div>
+                </div>
+                <div class="flash-card-btn-group">
+                    <button class="btn-card-cart flash-add-cart-btn" data-id="${prod.id}" title="Thêm vào giỏ" type="button">
+                        <i class="ri-shopping-cart-line"></i>
+                    </button>
+                    <button class="btn-card-buy flash-buy-now-btn" data-id="${prod.id}" type="button">
+                        <span>Mua Ngay</span>
+                    </button>
+                </div>
             </div>
         </div>
-    `).join('');
-    gridEl.querySelectorAll('.flash-sale-card').forEach((card) => {
-        card.addEventListener('click', () => {
+        `;
+    }).join('');
+    gridEl.querySelectorAll('.flash-card').forEach((card) => {
+        card.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.closest('.flash-add-cart-btn') || target.closest('.flash-buy-now-btn')) {
+                return;
+            }
             const id = card.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openQuickview(found);
+                openShopeeDetail(found);
+        });
+    });
+    gridEl.querySelectorAll('.flash-add-cart-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            const found = state.products.find(p => p.id.toString() === id?.toString());
+            if (found)
+                addItemToCart(found, 1);
+        });
+    });
+    gridEl.querySelectorAll('.flash-buy-now-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            const found = state.products.find(p => p.id.toString() === id?.toString());
+            if (found) {
+                addItemToCart(found, 1);
+                navigate('/cart');
+            }
         });
     });
 };
@@ -1279,117 +1353,242 @@ const initFlashSaleCountdown = () => {
             secEl.textContent = s.toString().padStart(2, '0');
     }, 1000);
 };
-const openQuickview = (product) => {
+const openShopeeDetail = (product) => {
     state.activeProduct = product;
     state.selectedQty = 1;
-    state.selectedVariant = (product.variants && product.variants.length > 0) ? product.variants[0] : null;
+    const variants = product.variants && product.variants.length > 0 ? product.variants : [];
+    const uniqueColors = Array.from(new Set(variants.map(v => v.color).filter(Boolean)));
+    const uniqueTypes = Array.from(new Set(variants.map(v => v.type).filter(Boolean)));
+    state.selectedColor = uniqueColors.length > 0 ? uniqueColors[0] : '';
+    state.selectedType = uniqueTypes.length > 0 ? uniqueTypes[0] : '';
+    const findCurrentVariant = () => {
+        if (variants.length === 0)
+            return null;
+        return variants.find(v => v.color === state.selectedColor && v.type === state.selectedType)
+            || variants.find(v => v.color === state.selectedColor)
+            || variants[0];
+    };
+    state.selectedVariant = findCurrentVariant();
     const modal = document.getElementById('quickviewModal');
     const content = document.getElementById('quickviewContent');
     if (!modal || !content)
         return;
-    const hasVariants = product.variants && product.variants.length > 0;
-    content.innerHTML = `
-        <div class="modal-gallery">
-            <img src="${product.imageUrl}" alt="${product.name}" class="modal-main-img">
-        </div>
-        <div class="modal-detail-panel">
-            <h2 class="modal-prod-title">${product.name}</h2>
-            <div class="modal-meta-bar">
-                <div style="color: #f59e0b; font-weight: 700; display: flex; align-items: center; gap: 4px;">
-                    <i class="ri-star-fill"></i>
-                    <span>${product.rating || '5.0'}</span>
+    const renderShopeeModal = () => {
+        const v = state.selectedVariant;
+        const currentPrice = v ? v.price : product.price;
+        const originalPrice = v && v.originalPrice ? v.originalPrice : product.originalPrice;
+        const stock = v ? v.stock : product.stock;
+        const activeImage = v && v.imageUrl ? v.imageUrl : product.imageUrl;
+        const discount = originalPrice && originalPrice > currentPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0;
+        const allThumbnails = variants.length > 0
+            ? variants.map(varItem => varItem.imageUrl).filter(Boolean)
+            : [product.imageUrl];
+        const uniqueThumbs = Array.from(new Set([product.imageUrl, ...allThumbnails]));
+        content.innerHTML = `
+        <div class="shopee-main-grid">
+            <div class="shopee-gallery">
+                <div class="shopee-main-image-wrap">
+                    <img id="shopeeMainImg" src="${activeImage}" alt="${product.name}" class="shopee-main-image">
                 </div>
-                <span>•</span>
-                <div style="color: var(--text-muted);">Đã bán ${product.sold || 0}</div>
-                <span>•</span>
-                <div style="color: var(--success); font-weight: 600;">Còn lại ${product.stock} sản phẩm</div>
-            </div>
-
-            <div class="modal-price-box">
-                <span class="modal-curr-price" id="modalPriceDisplay">${formatPrice(state.selectedVariant ? state.selectedVariant.price : product.price)}</span>
-                ${product.originalPrice ? `<span class="modal-old-price">${formatPrice(product.originalPrice)}</span>` : ''}
-            </div>
-
-            <div class="modal-prod-desc">${product.description || 'Sản phẩm chính hãng với tiêu chuẩn chất lượng cao, bảo hành điện tử chính hãng toàn quốc.'}</div>
-
-            ${hasVariants ? `
-            <div style="margin-bottom: 16px;">
-                <div class="option-label">Phân Loại Sản Phẩm:</div>
-                <div class="option-pills" id="modalVariantPills">
-                    ${product.variants.map((v, i) => `
-                        <div class="option-pill ${i === 0 ? 'selected' : ''}" data-idx="${i}">${v.name}</div>
+                <div class="shopee-thumbnails">
+                    ${uniqueThumbs.map(imgUrl => `
+                        <img src="${imgUrl}" alt="Thumbnail" class="shopee-thumb-item ${imgUrl === activeImage ? 'active' : ''}" data-thumb="${imgUrl}">
                     `).join('')}
                 </div>
-            </div>
-            ` : ''}
-
-            <div style="margin-bottom: 24px;">
-                <div class="option-label">Số Lượng:</div>
-                <div class="qty-control">
-                    <button class="qty-btn" id="modalQtyMinus" type="button">-</button>
-                    <input type="text" class="qty-input" id="modalQtyInput" value="1" readonly>
-                    <button class="qty-btn" id="modalQtyPlus" type="button">+</button>
+                <div class="shopee-commitments">
+                    <div class="shopee-commit-item">
+                        <i class="ri-arrow-go-back-line"></i>
+                        <span>7 ngày miễn phí đổi trả</span>
+                    </div>
+                    <div class="shopee-commit-item">
+                        <i class="ri-shield-star-line"></i>
+                        <span>Hàng chính hãng 100%</span>
+                    </div>
+                    <div class="shopee-commit-item">
+                        <i class="ri-truck-line"></i>
+                        <span>Miễn phí vận chuyển</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="modal-cta-row">
-                <button class="btn btn-secondary btn-lg" id="modalAddToCartBtn" type="button">
-                    <i class="ri-shopping-cart-line"></i> Thêm Vào Giỏ Hàng
-                </button>
-                <button class="btn btn-primary btn-lg" id="modalBuyNowBtn" type="button">
-                    <i class="ri-flashlight-line"></i> Mua Ngay
-                </button>
+            <div class="shopee-info-col">
+                <div class="shopee-title-area">
+                    <span class="shopee-mall-tag">Chính Hãng</span>
+                    <h2 class="shopee-product-title">${product.name}</h2>
+                </div>
+
+                <div class="shopee-rating-strip">
+                    <div class="shopee-rating-val">
+                        <span>${product.rating || '5.0'}</span>
+                        <i class="ri-star-fill shopee-rating-stars"></i>
+                    </div>
+                    <div class="shopee-meta-divider"></div>
+                    <div><strong>${product.sold || product.soldCount || 100}</strong> Đã Bán</div>
+                    <div class="shopee-meta-divider"></div>
+                    <div>Kho: <strong>${stock}</strong> sản phẩm</div>
+                </div>
+
+                <div class="shopee-price-box">
+                    ${product.isFlashSale ? `
+                        <div class="shopee-flash-banner">
+                            <span><i class="ri-flashlight-fill" style="color: #ffd839;"></i> FLASH SALE GIÁ SỐC</span>
+                        </div>
+                    ` : ''}
+                    ${originalPrice && originalPrice > currentPrice ? `
+                        <div class="shopee-price-original">${formatPrice(originalPrice)}</div>
+                    ` : ''}
+                    <div id="shopeeDisplayPrice" class="shopee-price-current">${formatPrice(currentPrice)}</div>
+                    ${discount > 0 ? `
+                        <span id="shopeeDisplayDiscount" class="shopee-price-discount">-${discount}% GIẢM</span>
+                    ` : ''}
+                </div>
+
+                <div class="shopee-variant-group">
+                    ${uniqueColors.length > 0 ? `
+                        <div class="shopee-variant-row">
+                            <div class="shopee-variant-label">Màu Sắc</div>
+                            <div class="shopee-variant-options">
+                                ${uniqueColors.map(color => `
+                                    <button class="shopee-option-btn ${color === state.selectedColor ? 'active' : ''}" data-color="${color}" type="button">
+                                        ${color}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${uniqueTypes.length > 0 ? `
+                        <div class="shopee-variant-row">
+                            <div class="shopee-variant-label">Phân Loại</div>
+                            <div class="shopee-variant-options">
+                                ${uniqueTypes.map(type => `
+                                    <button class="shopee-option-btn ${type === state.selectedType ? 'active' : ''}" data-type="${type}" type="button">
+                                        ${type}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="shopee-quantity-row">
+                        <div class="shopee-variant-label">Số Lượng</div>
+                        <div class="shopee-qty-wrapper">
+                            <button class="shopee-qty-btn" id="shopeeModalQtyMinus" type="button">-</button>
+                            <input id="shopeeModalQtyInput" type="text" class="shopee-qty-input" value="${state.selectedQty}" readonly>
+                            <button class="shopee-qty-btn" id="shopeeModalQtyPlus" type="button">+</button>
+                        </div>
+                        <div class="shopee-stock-text">
+                            ${stock > 0 ? `Còn ${stock} sản phẩm có sẵn` : '<span style="color: var(--accent); font-weight: 700;">Tạm hết hàng</span>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="shopee-actions-row">
+                    <button id="shopeeAddCartBtn" class="shopee-btn-add-cart" ${stock <= 0 ? 'disabled' : ''} type="button">
+                        <i class="ri-shopping-cart-2-line" style="font-size: 1.25rem;"></i>
+                        <span>Thêm Vào Giỏ Hàng</span>
+                    </button>
+                    <button id="shopeeBuyNowBtn" class="shopee-btn-buy-now" ${stock <= 0 ? 'disabled' : ''} type="button">
+                        <i class="ri-flashlight-fill"></i>
+                        <span>Mua Ngay</span>
+                    </button>
+                </div>
             </div>
         </div>
-    `;
+
+        <div class="shopee-detail-tabs">
+            <div class="shopee-section-heading">
+                <i class="ri-file-list-3-line" style="color: #ee4d2d;"></i>
+                <span>CHI TIẾT SẢN PHẨM</span>
+            </div>
+            <table class="shopee-specs-table">
+                <tbody>
+                    <tr>
+                        <td>Danh Mục</td>
+                        <td>${product.categoryName || product.category}</td>
+                    </tr>
+                    <tr>
+                        <td>Thương Hiệu</td>
+                        <td>Chính Hãng NovaShop</td>
+                    </tr>
+                    <tr>
+                        <td>Bảo Hành</td>
+                        <td>Bảo hành điện tử 12 tháng</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="shopee-section-heading">
+                <i class="ri-article-line" style="color: #ee4d2d;"></i>
+                <span>MÔ TẢ SẢN PHẨM</span>
+            </div>
+            <div class="shopee-desc-content">
+                <p>${product.description || 'Sản phẩm chính hãng với tiêu chuẩn chất lượng cao, bảo hành điện tử chính hãng toàn quốc.'}</p>
+            </div>
+        </div>
+        `;
+        content.querySelectorAll('.shopee-thumb-item').forEach((thumb) => {
+            thumb.addEventListener('click', () => {
+                const imgUrl = thumb.getAttribute('data-thumb');
+                const mainImg = document.getElementById('shopeeMainImg');
+                if (mainImg && imgUrl)
+                    mainImg.src = imgUrl;
+                content.querySelectorAll('.shopee-thumb-item').forEach(t => t.classList.remove('active'));
+                thumb.classList.add('active');
+            });
+        });
+        content.querySelectorAll('[data-color]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.selectedColor = btn.getAttribute('data-color') || '';
+                state.selectedVariant = findCurrentVariant();
+                renderShopeeModal();
+            });
+        });
+        content.querySelectorAll('[data-type]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.selectedType = btn.getAttribute('data-type') || '';
+                state.selectedVariant = findCurrentVariant();
+                renderShopeeModal();
+            });
+        });
+        const qtyInput = document.getElementById('shopeeModalQtyInput');
+        const minusBtn = document.getElementById('shopeeModalQtyMinus');
+        const plusBtn = document.getElementById('shopeeModalQtyPlus');
+        if (minusBtn && qtyInput) {
+            minusBtn.addEventListener('click', () => {
+                if (state.selectedQty > 1) {
+                    state.selectedQty--;
+                    qtyInput.value = state.selectedQty.toString();
+                }
+            });
+        }
+        if (plusBtn && qtyInput) {
+            plusBtn.addEventListener('click', () => {
+                const maxStock = state.selectedVariant ? state.selectedVariant.stock : product.stock;
+                if (state.selectedQty < maxStock) {
+                    state.selectedQty++;
+                    qtyInput.value = state.selectedQty.toString();
+                }
+            });
+        }
+        const addCartBtn = document.getElementById('shopeeAddCartBtn');
+        if (addCartBtn) {
+            addCartBtn.addEventListener('click', () => {
+                addItemToCart(product, state.selectedQty, state.selectedVariant?.name);
+                modal.classList.remove('active');
+            });
+        }
+        const buyNowBtn = document.getElementById('shopeeBuyNowBtn');
+        if (buyNowBtn) {
+            buyNowBtn.addEventListener('click', () => {
+                addItemToCart(product, state.selectedQty, state.selectedVariant?.name);
+                modal.classList.remove('active');
+                navigate('/cart');
+            });
+        }
+    };
+    renderShopeeModal();
     modal.classList.add('active');
-    const qtyInput = document.getElementById('modalQtyInput');
-    const minusBtn = document.getElementById('modalQtyMinus');
-    const plusBtn = document.getElementById('modalQtyPlus');
-    const priceDisplay = document.getElementById('modalPriceDisplay');
-    if (minusBtn && qtyInput) {
-        minusBtn.addEventListener('click', () => {
-            if (state.selectedQty > 1) {
-                state.selectedQty--;
-                qtyInput.value = state.selectedQty.toString();
-            }
-        });
-    }
-    if (plusBtn && qtyInput) {
-        plusBtn.addEventListener('click', () => {
-            if (state.selectedQty < product.stock) {
-                state.selectedQty++;
-                qtyInput.value = state.selectedQty.toString();
-            }
-        });
-    }
-    document.querySelectorAll('#modalVariantPills .option-pill').forEach((pill) => {
-        pill.addEventListener('click', () => {
-            document.querySelectorAll('#modalVariantPills .option-pill').forEach(p => p.classList.remove('selected'));
-            pill.classList.add('selected');
-            const idx = parseInt(pill.getAttribute('data-idx') || '0', 10);
-            if (product.variants && product.variants[idx]) {
-                state.selectedVariant = product.variants[idx];
-                if (priceDisplay)
-                    priceDisplay.textContent = formatPrice(state.selectedVariant.price);
-            }
-        });
-    });
-    const addCartBtn = document.getElementById('modalAddToCartBtn');
-    if (addCartBtn) {
-        addCartBtn.addEventListener('click', () => {
-            addItemToCart(product, state.selectedQty, state.selectedVariant?.name);
-            modal.classList.remove('active');
-        });
-    }
-    const buyNowBtn = document.getElementById('modalBuyNowBtn');
-    if (buyNowBtn) {
-        buyNowBtn.addEventListener('click', () => {
-            addItemToCart(product, state.selectedQty, state.selectedVariant?.name);
-            modal.classList.remove('active');
-            navigate('/cart');
-        });
-    }
 };
 const addItemToCart = (product, quantity = 1, variantName) => {
     const itemPrice = state.selectedVariant && state.selectedVariant.name === variantName
@@ -1757,7 +1956,7 @@ const initChatWidget = () => {
         launcherBtn.addEventListener('click', () => {
             state.chatOpen = !state.chatOpen;
             if (state.chatOpen) {
-                chatWindow.classList.add('open');
+                chatWindow.classList.add('active');
                 if (!state.chatSessionId) {
                     startChatSession();
                 }
@@ -1766,14 +1965,14 @@ const initChatWidget = () => {
                 }
             }
             else {
-                chatWindow.classList.remove('open');
+                chatWindow.classList.remove('active');
             }
         });
     }
     if (closeBtn && chatWindow) {
         closeBtn.addEventListener('click', () => {
             state.chatOpen = false;
-            chatWindow.classList.remove('open');
+            chatWindow.classList.remove('active');
         });
     }
     if (modeToggleBtn) {
@@ -1956,7 +2155,7 @@ const renderChatMessages = () => {
             const id = item.getAttribute('data-rec-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openQuickview(found);
+                openShopeeDetail(found);
         });
     });
 };
