@@ -1,11 +1,41 @@
 # HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ PHÂN TÁN NOVASHOP (MICROSERVICES ARCHITECTURE)
 
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express.js" />
+  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white" alt="RabbitMQ" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Google_Gemini_AI-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini" />
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
+  <img src="https://img.shields.io/badge/Dependabot-025E8C?style=for-the-badge&logo=dependabot&logoColor=white" alt="Dependabot" />
+</p>
+
 > **Đề tài:** Phát triển hệ thống mua sắm trực tuyến toàn diện theo kiến trúc Microservices, API Gateway, kiến trúc hướng sự kiện (Event-Driven Architecture) và Trợ lý ảo tư vấn thông minh Google Gemini AI.  
-> **Nền tảng công nghệ:** Node.js • TypeScript • Express.js • RabbitMQ • MySQL • Docker & Docker Compose • Vanilla HTML5/CSS3.
+> **Cơ sở công nghệ:** Nền tảng phân tán đồng bộ và bất đồng bộ, lập trình type-safe với TypeScript, quản lý thông điệp hàng đợi qua RabbitMQ, và cơ sở dữ liệu quan hệ MySQL chuẩn hóa.
 
 ---
 
-## 1. TỔNG QUAN KIẾN TRÚC HỆ THỐNG
+## 1. BẢNG MA TRẬN CÔNG NGHỆ & NGÔN NGỮ SỬ DỤNG
+
+| Phân Hệ / Thành Phần | Ngôn Ngữ & Công Nghệ Chính | Biểu Tượng Chuẩn (Badges) | Vai Trò Kỹ Thuật |
+| :--- | :--- | :--- | :--- |
+| **Cửa Hàng Storefront** | TypeScript, HTML5, Vanilla CSS3 | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white) ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white) | Single Page Application (SPA), Quản lý State tập trung, UI 2 tầng hiện đại, Modal tương tác, 7 trang chân trang |
+| **Cổng Quản Trị Admin** | TypeScript, Dark Glassmorphism CSS | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white) | Bảng điều khiển kinh doanh, Quản lý sản phẩm, Danh mục, Đơn hàng, Xác thực JWT |
+| **API Gateway** | JavaScript, Node.js, Express.js | ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black) ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![Express](https://img.shields.io/badge/Express.js-000000?style=flat-square&logo=express&logoColor=white) | Reverse Proxy, Rate Limiting chống DDoS, Middleware ghi log độ trễ và theo dõi tình trạng sức khỏe dịch vụ |
+| **Identity Service** | JavaScript, Node.js, Express, MySQL | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) | Quản lý người dùng, Mã hóa mật khẩu bcrypt, Cấp phát và thẩm định JSON Web Token (JWT) |
+| **Product Service** | JavaScript, Node.js, Express, MySQL | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) | Quản lý danh mục hàng hóa, Chi tiết sản phẩm, Biến thể màu sắc/dung lượng, Trừ kho đồng bộ tức thì |
+| **Order Service** | JavaScript, Node.js, Express, RabbitMQ, MySQL | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=flat-square&logo=rabbitmq&logoColor=white) ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) | Tiếp nhận giỏ hàng, Thanh toán COD/Chuyển khoản, Event Producer phát sự kiện đơn hàng vào RabbitMQ |
+| **Notification Service** | JavaScript, Node.js, Express, RabbitMQ | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=flat-square&logo=rabbitmq&logoColor=white) | Event Consumer lắng nghe hàng đợi `orders_queue`, Trích xuất dữ liệu và tạo thông báo hệ thống |
+| **Chat & AI Service** | TypeScript, Node.js, Google Gemini | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) | Trợ lý tư vấn mua sắm thông minh NovaBot AI, Đề xuất sản phẩm chuẩn xác theo câu hỏi khách hàng |
+| **Container & Bảo Mật** | Docker, Docker Compose, Dependabot | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) ![Dependabot](https://img.shields.io/badge/Dependabot-025E8C?style=flat-square&logo=dependabot&logoColor=white) | Đóng gói môi trường đồng nhất, Quét và vá lỗ hổng bảo mật tự động hàng tuần |
+
+---
+
+## 2. TỔNG QUAN KIẾN TRÚC HỆ THỐNG
 
 Hệ thống **NovaShop** được thiết kế và xây dựng trên mô hình kiến trúc phân tán **Microservices**, chia tách rõ ràng ranh giới nghiệp vụ (Bounded Context) giữa các phân hệ chức năng độc lập. Giải pháp này giúp hệ thống đạt độ sẵn sàng cao, dễ dàng mở rộng theo chiều ngang (Horizontal Scaling) và tối ưu hóa hiệu năng xử lý.
 
@@ -49,7 +79,7 @@ Hệ thống **NovaShop** được thiết kế và xây dựng trên mô hình 
 
 ---
 
-## 2. PHÂN CÔNG NHIỆM VỤ THÀNH VIÊN (NHÓM 2)
+## 3. PHÂN CÔNG NHIỆM VỤ THÀNH VIÊN (NHÓM 2)
 
 | STT | Thành viên | Vai trò & Trách nhiệm chính | Nhánh tính năng |
 | :---: | :--- | :--- | :--- |
@@ -60,11 +90,11 @@ Hệ thống **NovaShop** được thiết kế và xây dựng trên mô hình 
 
 ---
 
-## 3. THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG TRỰC QUAN (UI/UX DESIGN)
+## 4. THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG TRỰC QUAN (UI/UX DESIGN)
 
 Hệ thống được phát triển theo tiêu chuẩn giao diện hiện đại, trực quan, tối ưu trải nghiệm tương tác (UX) và thân thiện với mọi kích cỡ thiết bị.
 
-### 3.1. Giao diện Cửa hàng Dành cho Khách Mua (Storefront Web - `http://localhost:8000`)
+### 4.1. Giao diện Cửa hàng Dành cho Khách Mua (Storefront Web - `http://localhost:8000`)
 * **Thanh Tiện Ích Trên Cùng (Top Bar)**:
   * Bên trái: Nhãn chứng nhận *"NovaShop Chính Hãng 100%"*, liên kết tải ứng dụng di động, kết nối mạng xã hội.
   * Bên phải: Mục *Thông Báo*, liên kết *Hỗ Trợ* (dẫn tới Trung tâm trợ giúp), cụm điều hướng tài khoản thành viên (*Đăng Ký*, *Đăng Nhập*, *Đơn Mua*, *Đăng Xuất*).
@@ -101,7 +131,7 @@ Hệ thống được phát triển theo tiêu chuẩn giao diện hiện đại
   * Cửa sổ Live Chat tương tác trực tiếp tích hợp mô hình **Google Gemini AI**.
   * Hỗ trợ tìm kiếm, so sánh tính năng và đưa ra gợi ý sản phẩm phù hợp với nhu cầu người mua.
 
-### 3.2. Cổng Quản Trị Dành Cho Chủ Cửa Hàng (Admin Portal - `http://localhost:8000/admin`)
+### 4.2. Cổng Quản Trị Dành Cho Chủ Cửa Hàng (Admin Portal - `http://localhost:8000/admin`)
 * **Trang Đăng Nhập Quản Trị (`/admin/login`)**: Thiết kế Dark Mode hiện đại, hiệu ứng kính mờ (Glassmorphism), cơ chế xác thực JWT an toàn.
 * **Bảng Điều Khiển Tổng Quan (Dashboard)**: Thống kê tức thời doanh thu, tổng số đơn mua, lượng khách hàng và các chỉ số kinh doanh quan trọng.
 * **Quản Lý Sản Phẩm**: Thêm mới, chỉnh sửa thông tin, giá bán, số lượng tồn kho và cập nhật hình ảnh.
@@ -110,7 +140,7 @@ Hệ thống được phát triển theo tiêu chuẩn giao diện hiện đại
 
 ---
 
-## 4. CÁC THÀNH PHẦN VÀ CỔNG TRUY CẬP (PORTS & SERVICES)
+## 5. CÁC THÀNH PHẦN VÀ CỔNG TRUY CẬP (PORTS & SERVICES)
 
 | Thành phần / Dịch vụ | Cổng (Port) | Địa chỉ truy cập / Vai trò |
 | :--- | :---: | :--- |
@@ -128,7 +158,7 @@ Hệ thống được phát triển theo tiêu chuẩn giao diện hiện đại
 
 ---
 
-## 5. HƯỚNG DẪN KHỞI TẠO CƠ SỞ DỮ LIỆU (MYSQL)
+## 6. HƯỚNG DẪN KHỞI TẠO CƠ SỞ DỮ LIỆU (MYSQL)
 
 Dự án cung cấp tệp khởi tạo [`database.sql`](database.sql) bao gồm toàn bộ lược đồ bảng, khóa ngoại và dữ liệu sản phẩm/danh mục mẫu chuẩn:
 
@@ -154,7 +184,7 @@ Dự án cung cấp tệp khởi tạo [`database.sql`](database.sql) bao gồm 
 
 ---
 
-## 6. HƯỚNG DẪN CÀI ĐẶT VÀ KHỞI CHẠY DỰ ÁN
+## 7. HƯỚNG DẪN CÀI ĐẶT VÀ KHỞI CHẠY DỰ ÁN
 
 ### Cách 1: Khởi chạy siêu tốc bằng Node.js Runner (Khuyên dùng khi phát triển cục bộ)
 Yêu cầu: Máy đã cài **Node.js (>= 18)** và đang chạy dịch vụ **MySQL** (qua XAMPP, Laragon hoặc Docker).
@@ -213,7 +243,7 @@ cd services/chat-service && npm install && node dist/index.js
 
 ---
 
-## 7. QUY TRÌNH XỬ LÝ NGHIỆP VỤ HƯỚNG SỰ KIỆN (EVENT-DRIVEN WORKFLOW)
+## 8. QUY TRÌNH XỬ LÝ NGHIỆP VỤ HƯỚNG SỰ KIỆN (EVENT-DRIVEN WORKFLOW)
 
 ```
 [Khách Hàng Checkout] 
@@ -244,5 +274,5 @@ cd services/chat-service && npm install && node dist/index.js
 
 ---
 
-## 8. BẢN QUYỀN & MỤC ĐÍCH SỬ DỤNG
+## 9. BẢN QUYỀN & MỤC ĐÍCH SỬ DỤNG
 Dự án được xây dựng và hoàn thiện bởi **Nhóm 2 - Học phần Thương Mại Điện Tử**. Toàn bộ mã nguồn phục vụ mục đích nghiên cứu, học tập và ứng dụng thực tiễn kiến trúc hệ thống phần mềm phân tán hiện đại.
