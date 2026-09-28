@@ -538,7 +538,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.shopee-option-btn-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+  object-fit: cover;
+  border: 1px solid var(--border-light);
 }
 
 .shopee-option-btn:hover {

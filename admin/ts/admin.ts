@@ -149,31 +149,38 @@ const showToast = (title: string, message: string, type: 'success' | 'error' | '
 
 const renderAdminLoginView = (): string => {
   return `
-  <div class="admin-login-wrapper">
-    <div class="admin-login-card">
-      <div class="admin-login-header">
-        <div class="admin-login-icon">
-          <i class="ri-shield-user-fill"></i>
+  <div class="admin-login-body">
+    <div class="admin-login-wrapper">
+      <div class="admin-login-card">
+        <div class="admin-login-header">
+          <div class="admin-login-icon">
+            <i class="ri-shield-user-fill"></i>
+          </div>
+          <h1 class="admin-login-title">Cổng Quản Trị Hệ Thống</h1>
+          <p class="admin-login-subtitle">Vui lòng đăng nhập bằng tài khoản Quản Trị Viên (Admin)</p>
         </div>
-        <h1 class="admin-login-title">Cổng Quản Trị Hệ Thống</h1>
-        <p class="admin-login-subtitle">Vui lòng đăng nhập bằng tài khoản Quản Trị Viên (Admin)</p>
+
+        <form id="adminLoginForm">
+          <div class="admin-input-group">
+            <label class="admin-input-label" for="adminUsername">Tài khoản quản trị</label>
+            <input type="text" id="adminUsername" class="admin-input-field" placeholder="Tên tài khoản admin" required autofocus>
+          </div>
+
+          <div class="admin-input-group">
+            <label class="admin-input-label" for="adminPassword">Mật khẩu</label>
+            <input type="password" id="adminPassword" class="admin-input-field" placeholder="••••••••" required>
+          </div>
+
+          <button type="submit" class="admin-btn-submit" id="adminLoginBtn">
+            <span>Xác Thực & Đăng Nhập</span>
+          </button>
+        </form>
+
+        <a href="/" class="admin-back-link">
+          <i class="ri-arrow-left-line"></i>
+          <span>Quay lại trang mua sắm NovaShop</span>
+        </a>
       </div>
-
-      <form id="adminLoginForm">
-        <div class="admin-input-group">
-          <label class="admin-input-label" for="adminUsername">Tài khoản quản trị</label>
-          <input type="text" id="adminUsername" class="admin-input-field" placeholder="Tên tài khoản admin" required autofocus>
-        </div>
-
-        <div class="admin-input-group">
-          <label class="admin-input-label" for="adminPassword">Mật khẩu</label>
-          <input type="password" id="adminPassword" class="admin-input-field" placeholder="••••••••" required>
-        </div>
-
-        <button type="submit" class="admin-btn-submit" id="adminLoginBtn">
-          <span>Xác Thực & Đăng Nhập</span>
-        </button>
-      </form>
     </div>
   </div>
   `;

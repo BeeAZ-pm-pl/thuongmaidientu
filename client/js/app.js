@@ -90,33 +90,70 @@ const updateCartBadge = () => {
 };
 const renderHeaderTemplate = () => {
     const cartCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    const userMenuHtml = state.user
+    const userTopHtml = state.user
         ? `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.875rem; color: var(--text-main);">
-                <i class="ri-user-smile-fill" style="color: var(--primary); font-size: 1.125rem;"></i>
+        <div class="top-user-group">
+            <span class="top-user-name">
+                <i class="ri-user-smile-fill" style="color: #ee4d2d; font-size: 1rem;"></i>
                 <span>${state.user.name}</span>
-            </div>
-            <a href="/orders" class="btn btn-secondary btn-sm" data-nav-link>
+            </span>
+            <span class="top-bar-divider"></span>
+            <a href="/orders" class="top-bar-link" data-nav-link>
                 <i class="ri-file-list-3-line"></i>
-                <span>Đơn mua</span>
+                <span>Đơn Mua</span>
             </a>
-            <button id="logoutBtn" type="button" class="btn btn-outline btn-sm" style="border-color: var(--border-light); color: var(--text-muted);">
+            <span class="top-bar-divider"></span>
+            <button id="logoutBtn" type="button" class="top-bar-link" style="background: none; border: none; cursor: pointer; padding: 0;">
                 <i class="ri-logout-box-r-line"></i>
+                <span>Đăng Xuất</span>
             </button>
         </div>
         `
         : `
-        <a href="/login" class="btn btn-secondary btn-sm" data-nav-link>
-            <i class="ri-user-line"></i>
-            <span>Đăng Nhập</span>
-        </a>
-        <a href="/register" class="btn btn-primary btn-sm" data-nav-link>
-            <span>Đăng Ký</span>
-        </a>
+        <div class="top-auth-group" style="display: flex; align-items: center; gap: 10px;">
+            <a href="/register" class="top-auth-link" data-nav-link>Đăng Ký</a>
+            <span class="top-bar-divider"></span>
+            <a href="/login" class="top-auth-link" data-nav-link>Đăng Nhập</a>
+        </div>
         `;
     return `
     <header class="site-header">
+        <div class="site-top-bar">
+            <div class="container top-bar-container">
+                <div class="top-bar-left">
+                    <span class="top-bar-link">
+                        <i class="ri-shield-check-fill" style="color: #ee4d2d;"></i>
+                        <span>NovaShop Chính Hãng 100%</span>
+                    </span>
+                    <span class="top-bar-divider"></span>
+                    <span class="top-bar-link">
+                        <i class="ri-smartphone-line"></i>
+                        <span>Tải ứng dụng</span>
+                    </span>
+                    <span class="top-bar-divider"></span>
+                    <span class="top-bar-link">
+                        <span>Kết nối</span>
+                        <i class="ri-facebook-circle-fill" style="font-size: 1rem;"></i>
+                        <i class="ri-instagram-fill" style="font-size: 1rem;"></i>
+                    </span>
+                </div>
+                <div class="top-bar-right">
+                    <span class="top-bar-link">
+                        <i class="ri-notification-3-line"></i>
+                        <span>Thông Báo</span>
+                    </span>
+                    <a href="/help" class="top-bar-link" data-nav-link>
+                        <i class="ri-question-line"></i>
+                        <span>Hỗ Trợ</span>
+                    </a>
+                    <span class="top-bar-divider"></span>
+                    <div id="userMenuWrapper">
+                        ${userTopHtml}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="container nav-container">
             <a href="/" class="brand-logo" data-nav-link>
                 <div class="brand-icon">
@@ -125,19 +162,26 @@ const renderHeaderTemplate = () => {
                 <span>NovaShop</span>
             </a>
 
-            <div class="search-bar-wrapper">
-                <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm tai nghe, bàn phím, thiết bị số..." value="${state.searchQuery || ''}">
-                <button id="searchBtn" class="search-btn" aria-label="Tìm kiếm" type="button">
-                    <i class="ri-search-line"></i>
-                </button>
+            <div class="search-container-group">
+                <div class="search-bar-wrapper">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm sản phẩm, thương hiệu, thiết bị số..." value="${state.searchQuery || ''}" autocomplete="off">
+                    <button id="searchBtn" class="search-btn" aria-label="Tìm kiếm" type="button">
+                        <i class="ri-search-line"></i>
+                    </button>
+                    <div id="searchSuggestionsDropdown" class="search-suggestions-dropdown"></div>
+                </div>
+                <div class="search-hot-keywords">
+                    <span class="hot-keyword-tag" data-search-kw="Tai nghe Sony WH-1000XM5">Tai nghe Sony</span>
+                    <span class="hot-keyword-tag" data-search-kw="Bàn phím cơ Keychron">Bàn phím cơ</span>
+                    <span class="hot-keyword-tag" data-search-kw="Apple Watch Series 9">Apple Watch</span>
+                    <span class="hot-keyword-tag" data-search-kw="Chuột Logitech MX Master">Chuột Logitech</span>
+                    <span class="hot-keyword-tag" data-search-kw="Màn hình 4K LG">Màn hình 4K</span>
+                    <span class="hot-keyword-tag" data-search-kw="Flash Sale">⚡ Flash Sale</span>
+                </div>
             </div>
 
             <div class="nav-actions">
-                <div id="userMenuWrapper">
-                    ${userMenuHtml}
-                </div>
-
-                <a href="/cart" class="btn-icon cart-btn-trigger" aria-label="Giỏ hàng" data-nav-link>
+                <a href="/cart" class="cart-btn-trigger" aria-label="Giỏ hàng" data-nav-link>
                     <i class="ri-shopping-cart-2-line"></i>
                     <span id="cartCountBadge" class="cart-count">${cartCount}</span>
                 </a>
@@ -154,24 +198,24 @@ const renderFooterTemplate = () => {
                 <div>
                     <div class="footer-brand">NovaShop</div>
                     <p class="footer-desc">
-                        Nền tảng mua sắm trực tuyến uy tín hàng đầu, cam kết 100% hàng chính hãng, đổi trả thuận tiện và giao hàng nhanh toàn quốc.
+                        Nền tảng mua sắm thiết bị công nghệ & điện tử chính hãng hàng đầu, cam kết 100% hàng chất lượng cao, chính sách 1 đổi 1 và giao vận hỏa tốc toàn quốc.
                     </p>
                 </div>
                 <div>
                     <h3 class="footer-col-title">Về Chúng Tôi</h3>
                     <ul class="footer-links">
-                        <li><a href="#" onclick="return false;">Giới thiệu công ty</a></li>
-                        <li><a href="#" onclick="return false;">Tuyển dụng</a></li>
-                        <li><a href="#" onclick="return false;">Điều khoản dịch vụ</a></li>
-                        <li><a href="#" onclick="return false;">Chính sách bảo mật</a></li>
+                        <li><a href="/about" data-nav-link>Giới thiệu công ty</a></li>
+                        <li><a href="/careers" data-nav-link>Tuyển dụng</a></li>
+                        <li><a href="/terms" data-nav-link>Điều khoản dịch vụ</a></li>
+                        <li><a href="/privacy" data-nav-link>Chính sách bảo mật</a></li>
                     </ul>
                 </div>
                 <div>
                     <h3 class="footer-col-title">Hỗ Trợ Khách Hàng</h3>
                     <ul class="footer-links">
-                        <li><a href="#" onclick="return false;">Trung tâm trợ giúp</a></li>
-                        <li><a href="#" onclick="return false;">Hướng dẫn mua hàng</a></li>
-                        <li><a href="#" onclick="return false;">Chính sách vận chuyển</a></li>
+                        <li><a href="/help" data-nav-link>Trung tâm trợ giúp</a></li>
+                        <li><a href="/guide" data-nav-link>Hướng dẫn mua hàng</a></li>
+                        <li><a href="/shipping" data-nav-link>Chính sách vận chuyển</a></li>
                         <li><a href="/orders" data-nav-link>Tra cứu đơn hàng</a></li>
                     </ul>
                 </div>
@@ -179,15 +223,516 @@ const renderFooterTemplate = () => {
                     <h3 class="footer-col-title">Thông Tin Liên Hệ</h3>
                     <p class="footer-desc">Hotline CSKH: 1900 8888 (8:00 - 21:30)</p>
                     <p class="footer-desc">Email hỗ trợ: support@novashop.vn</p>
-                    <p class="footer-desc">Địa chỉ: Hà Nội & TP. Hồ Chí Minh</p>
+                    <p class="footer-desc">Địa chỉ trụ sở: Hà Nội & TP. Hồ Chí Minh</p>
                 </div>
             </div>
             <div class="footer-bottom">
                 <div>&copy; 2026 NovaShop. Bảo lưu mọi quyền.</div>
-                <div>Mua sắm thông minh & tiện lợi</div>
+                <div>Hệ thống mua sắm công nghệ số tin cậy hàng đầu Việt Nam</div>
             </div>
         </div>
     </footer>
+    `;
+};
+const renderAboutView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-information-line"></i> Giới thiệu NovaShop</div>
+                <h1 class="static-hero-title">NovaShop - Định Chuẩn Mua Sắm Công Nghệ Chính Hãng</h1>
+                <p class="static-hero-subtitle">
+                    Hệ thống bán lẻ thiết bị số, điện thoại, máy tính bảng và phụ kiện công nghệ hàng đầu, mang đến cho người tiêu dùng trải nghiệm tiện ích, tốc độ và cam kết chất lượng tuyệt đối.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-rocket-line"></i> Câu Chuyện Thương Hiệu</h2>
+                <div class="static-card-content">
+                    <p>
+                        Được thành lập với sứ mệnh xóa bỏ rào cản về giá và nguồn gốc xuất xứ của các thiết bị công nghệ tại Việt Nam, NovaShop định vị là cửa hàng trực tiếp nhập khẩu và phân phối sản phẩm chính hãng 100% trực tiếp đến tận tay người tiêu dùng.
+                    </p>
+                    <p>
+                        Chúng tôi tập trung tối ưu hóa chi phí vận hành thông qua nền tảng công nghệ số hiện đại và hệ thống kho vận thông minh, từ đó mang đến mức giá ưu đãi nhất cùng chính sách hậu mãi vượt trội trên thị trường.
+                    </p>
+                </div>
+
+                <div class="static-feature-grid">
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-shield-check-line"></i></div>
+                        <h4>100% Chính Hãng</h4>
+                        <p>Tất cả sản phẩm đều có tem bảo hành chính hãng và hóa đơn VAT điện tử minh bạch.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-refresh-line"></i></div>
+                        <h4>Đổi Trả Trong 7 Ngày</h4>
+                        <p>Chính sách 1 đổi 1 nhanh chóng ngay tại nhà nếu sản phẩm phát sinh lỗi từ nhà sản xuất.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-truck-line"></i></div>
+                        <h4>Giao Vận Siêu Tốc</h4>
+                        <p>Giao hàng trong vòng 2 giờ tại nội thành Hà Nội, TP.HCM và 1-3 ngày trên cả nước.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-customer-service-2-line"></i></div>
+                        <h4>Tư Vấn Chuyên Sâu 24/7</h4>
+                        <p>Đội ngũ kỹ thuật viên am hiểu công nghệ sẵn sàng tư vấn chi tiết từng dòng sản phẩm.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-flag-line"></i> Tầm Nhìn & Sứ Mệnh</h2>
+                <div class="static-card-content">
+                    <p>
+                        <strong>Tầm nhìn:</strong> Trở thành thương hiệu mua sắm thiết bị điện tử trực tuyến uy tín và được yêu thích nhất tại Việt Nam vào năm 2030, tiên phong ứng dụng trí tuệ nhân tạo và tự động hóa trong logistics.
+                    </p>
+                    <p>
+                        <strong>Sứ mệnh:</strong> Nâng cao chất lượng cuộc sống số của người Việt thông qua những sản phẩm công nghệ tiên tiến nhất với chi phí hợp lý và dịch vụ khách hàng tận tâm.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
+    `;
+};
+const renderCareersView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-briefcase-line"></i> Cơ hội nghề nghiệp</div>
+                <h1 class="static-hero-title">Gia Nhập Đội Ngũ Nhân Sự NovaShop</h1>
+                <p class="static-hero-subtitle">
+                    Chúng tôi luôn tìm kiếm những tài năng đam mê công nghệ, sáng tạo và có tinh thần phụng sự khách hàng để cùng nhau kiến tạo tương lai thương mại điện tử thế hệ mới.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-heart-pulse-line"></i> Vì Sao Bạn Nên Chọn NovaShop?</h2>
+                <div class="static-card-content">
+                    <p>
+                        Tại NovaShop, chúng tôi đề cao sự tự chủ, học hỏi không ngừng và tinh thần cộng tác cởi mở. Mọi ý tưởng đổi mới sáng tạo đều được lắng nghe và thử nghiệm thực tế.
+                    </p>
+                </div>
+                <div class="static-feature-grid">
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-money-dollar-circle-line"></i></div>
+                        <h4>Thu Nhập Cạnh Tranh</h4>
+                        <p>Lương cứng hấp dẫn theo năng lực, thưởng hiệu quả kinh doanh và đánh giá tăng lương 2 lần/năm.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-macbook-line"></i></div>
+                        <h4>Thiết Bị Làm Việc Hiện Đại</h4>
+                        <p>Được cấp MacBook Pro / Laptop đồ họa cấu hình cao cùng màn hình 4K làm việc thoải mái.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-health-book-line"></i></div>
+                        <h4>Bảo Hiểm Sức Khỏe Toàn Diện</h4>
+                        <p>Gói bảo hiểm chăm sóc sức khỏe quốc tế cao cấp cho nhân viên và chính sách hỗ trợ gia đình.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-plane-line"></i></div>
+                        <h4>Du Lịch & Nghỉ Dưỡng Hàng Năm</h4>
+                        <p>Các chuyến đi nghỉ dưỡng hàng năm tại các resort cao cấp và nhiều hoạt động thể thao gắn kết.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-fire-line"></i> Các Vị Trí Đang Tuyển Dụng</h2>
+                <div class="job-item">
+                    <div>
+                        <div class="job-title">Senior Frontend Developer (TypeScript / Modern Web)</div>
+                        <div class="job-tags">
+                            <span class="job-tag">Hà Nội / Toàn thời gian</span>
+                            <span class="job-tag">25 - 40 Triệu VNĐ</span>
+                            <span class="job-tag">Kinh nghiệm 3+ năm</span>
+                        </div>
+                    </div>
+                    <a href="mailto:careers@novashop.vn?subject=Ứng tuyển Senior Frontend Developer" class="btn btn-primary btn-sm">Ứng tuyển ngay</a>
+                </div>
+
+                <div class="job-item">
+                    <div>
+                        <div class="job-title">Node.js Microservices Engineer</div>
+                        <div class="job-tags">
+                            <span class="job-tag">TP.HCM / Toàn thời gian</span>
+                            <span class="job-tag">28 - 45 Triệu VNĐ</span>
+                            <span class="job-tag">API Gateway & Distributed Systems</span>
+                        </div>
+                    </div>
+                    <a href="mailto:careers@novashop.vn?subject=Ứng tuyển Node.js Microservices Engineer" class="btn btn-primary btn-sm">Ứng tuyển ngay</a>
+                </div>
+
+                <div class="job-item">
+                    <div>
+                        <div class="job-title">Chuyên Viên Tư Vấn & Chăm Sóc Khách Hàng (CSKH)</div>
+                        <div class="job-tags">
+                            <span class="job-tag">Hà Nội & TP.HCM</span>
+                            <span class="job-tag">10 - 16 Triệu VNĐ</span>
+                            <span class="job-tag">Linh hoạt theo ca</span>
+                        </div>
+                    </div>
+                    <a href="mailto:careers@novashop.vn?subject=Ứng tuyển Chuyên Viên CSKH" class="btn btn-primary btn-sm">Ứng tuyển ngay</a>
+                </div>
+
+                <div class="job-item">
+                    <div>
+                        <div class="job-title">Quản Lý Kho Vận & Điều Phối Đơn Hàng Logistics</div>
+                        <div class="job-tags">
+                            <span class="job-tag">Tổng kho Hà Nội</span>
+                            <span class="job-tag">14 - 20 Triệu VNĐ</span>
+                            <span class="job-tag">Kinh nghiệm kho bãi</span>
+                        </div>
+                    </div>
+                    <a href="mailto:careers@novashop.vn?subject=Ứng tuyển Quản Lý Kho Vận" class="btn btn-primary btn-sm">Ứng tuyển ngay</a>
+                </div>
+
+                <p style="margin-top: 20px; font-size: 0.875rem; color: var(--text-muted); text-align: center;">
+                    Gửi CV ứng tuyển trực tiếp về email: <strong>careers@novashop.vn</strong> (Tiêu đề: [Họ Tên] - [Vị Trí Ứng Tuyển])
+                </p>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
+    `;
+};
+const renderTermsView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-file-text-line"></i> Quy chế & Chính sách</div>
+                <h1 class="static-hero-title">Điều Khoản Dịch Vụ NovaShop</h1>
+                <p class="static-hero-subtitle">
+                    Vui lòng đọc kỹ các điều khoản dưới đây trước khi thực hiện đặt hàng và sử dụng các dịch vụ mua sắm tại NovaShop.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-checkbox-circle-line"></i> 1. Quy Định Chung</h2>
+                <div class="static-card-content">
+                    <p>
+                        Bằng việc truy cập, tạo tài khoản hoặc đặt hàng tại NovaShop, khách hàng xác nhận đã đọc, hiểu và đồng ý tuân thủ toàn bộ các quy định tại văn bản điều khoản này cũng như các chính sách liên quan được công bố trên website.
+                    </p>
+                    <p>
+                        NovaShop có quyền thay đổi, chỉnh sửa hoặc cập nhật nội dung điều khoản bất kỳ lúc nào để phù hợp với quy định pháp luật và hoạt động thực tế. Các thay đổi sẽ có hiệu lực ngay khi đăng tải.
+                    </p>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-shopping-cart-2-line"></i> 2. Đặt Hàng & Xác Nhận Giao Dịch</h2>
+                <div class="static-card-content">
+                    <p>
+                        Khách hàng cần cung cấp đầy đủ và chính xác các thông tin bao gồm: Họ và tên, số điện thoại, địa chỉ nhận hàng và phương thức thanh toán để bảo đảm quyền lợi giao nhận.
+                    </p>
+                    <p>
+                        Đơn hàng chỉ được xem là xác nhận thành công sau khi hệ thống NovaShop ghi nhận và gửi thông báo mã đơn hàng qua giao diện hoặc nhân viên liên hệ xác thực. NovaShop có quyền từ chối các đơn hàng có dấu hiệu gian lận hoặc thông tin liên lạc không hợp lệ.
+                    </p>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-bank-card-line"></i> 3. Giá Cả & Phương Thức Thanh Toán</h2>
+                <div class="static-card-content">
+                    <p>
+                        Giá bán sản phẩm hiển thị trên website là giá cuối cùng đã bao gồm thuế Giá Trị Gia Tăng (VAT). Chi phí vận chuyển (nếu có) sẽ được hiển thị rõ ràng tại bước xác nhận giỏ hàng.
+                    </p>
+                    <p>
+                        Chúng tôi hỗ trợ 2 hình thức thanh toán chính: Thanh toán khi nhận hàng (COD) và Chuyển khoản ngân hàng trực tiếp. Quý khách có quyền đồng kiểm bao bì sản phẩm trước khi thanh toán cho nhân viên bưu tá.
+                    </p>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-scales-3-line"></i> 4. Giải Quyết Tranh Chấp & Khiếu Nại</h2>
+                <div class="static-card-content">
+                    <p>
+                        NovaShop luôn sẵn sàng lắng nghe và ưu tiên thương lượng hòa giải đối với mọi khiếu nại của khách hàng. Trong trường hợp không đạt được thỏa thuận chung, vụ việc sẽ được đưa ra cơ quan có thẩm quyền theo luật pháp Việt Nam.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
+    `;
+};
+const renderPrivacyView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-shield-keyhole-line"></i> Bảo mật thông tin</div>
+                <h1 class="static-hero-title">Chính Sách Bảo Mật Quyền Riêng Tư</h1>
+                <p class="static-hero-subtitle">
+                    NovaShop cam kết bảo mật 100% dữ liệu cá nhân của người tiêu dùng theo các tiêu chuẩn kỹ thuật số và quy định pháp luật an ninh mạng hiện hành.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-database-2-line"></i> 1. Mục Đích Thu Thập Thông Tin Cá Nhân</h2>
+                <div class="static-card-content">
+                    <p>
+                        Chúng tôi chỉ thu thập các thông tin thiết yếu phục vụ cho quy trình đặt hàng và hỗ trợ sau bán hàng: Họ tên, số điện thoại, địa chỉ nhận hàng và địa chỉ email.
+                    </p>
+                    <p>
+                        Mục đích sử dụng: Xử lý giao đơn hàng đến đúng địa chỉ, thông báo trạng thái đơn hàng, gửi hóa đơn bảo hành điện tử và hỗ trợ xử lý khiếu nại kỹ thuật.
+                    </p>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-lock-line"></i> 2. Cam Kết Bảo Vệ & Không Chia Sẻ Dữ Liệu</h2>
+                <div class="static-card-content">
+                    <p>
+                        NovaShop cam kết tuyệt đối không bán, cho thuê hoặc chia sẻ dữ liệu người dùng cho bất kỳ bên thứ ba nào vì mục đích quảng cáo hoặc tiếp thị không mong muốn.
+                    </p>
+                    <p>
+                        Thông tin giao hàng chỉ được cung cấp cho các đối tác vận chuyển ủy quyền (Viettel Post, GHTK, GHN) để thực hiện nhiệm vụ phát bưu kiện tới địa chỉ của quý khách.
+                    </p>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-user-settings-line"></i> 3. Quyền Của Khách Hàng</h2>
+                <div class="static-card-content">
+                    <p>
+                        Khách hàng có toàn quyền kiểm tra, cập nhật, điều chỉnh hoặc yêu cầu NovaShop hủy bỏ thông tin cá nhân của mình bất kỳ lúc nào bằng cách đăng nhập vào tài khoản hoặc liên hệ trực tiếp tới tổng đài CSKH 1900 8888.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
+    `;
+};
+const renderHelpView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-questionnaire-line"></i> Trợ giúp & FAQ</div>
+                <h1 class="static-hero-title">Trung Tâm Trợ Giúp Khách Hàng</h1>
+                <p class="static-hero-subtitle">
+                    Tìm kiếm câu trả lời nhanh chóng cho các thắc mắc thường gặp về đặt hàng, thanh toán, vận chuyển và chế độ bảo hành tại NovaShop.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-question-answer-line"></i> Câu Hỏi Thường Gặp (FAQ)</h2>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>1. Làm thế nào để đặt hàng tại NovaShop?</span>
+                            <i class="ri-arrow-down-s-line"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Bạn chỉ cần tìm sản phẩm mong muốn qua thanh tìm kiếm, chọn số lượng và nhấn "Thêm vào giỏ" hoặc "Mua ngay". Sau đó vào giỏ hàng điền thông tin người nhận và chọn hình thức thanh toán để hoàn tất.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>2. NovaShop chấp nhận những phương thức thanh toán nào?</span>
+                            <i class="ri-arrow-down-s-line"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Chúng tôi hỗ trợ 2 hình thức: Thanh toán khi nhận hàng (COD - Tiền mặt) và Chuyển khoản ngân hàng trực tiếp qua mã QR thanh toán nhanh.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>3. Thời gian giao hàng là bao lâu và phí ship tính thế nào?</span>
+                            <i class="ri-arrow-down-s-line"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Đơn hàng nội thành Hà Nội & TP.HCM được giao trong ngày (hoặc hỏa tốc 2 giờ). Các tỉnh khác nhận hàng sau 1 - 3 ngày làm việc. Phí ship đồng giá 30.000đ và hoàn toàn miễn phí cho đơn hàng từ 500.000đ trở lên.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>4. Tôi có được mở hộp kiểm tra hàng trước khi trả tiền không?</span>
+                            <i class="ri-arrow-down-s-line"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Có. NovaShop áp dụng chính sách đồng kiểm: Khách hàng được quyền mở kiện hàng kiểm tra ngoại quan máy, phụ kiện đi kèm trước khi thanh toán cho bưu tá.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>5. Chính sách bảo hành và đổi trả trong trường hợp sản phẩm bị lỗi?</span>
+                            <i class="ri-arrow-down-s-line"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Tất cả sản phẩm lỗi kỹ thuật do nhà sản xuất trong vòng 7 ngày đầu tiên đều được áp dụng chính sách 1 đổi 1 mới 100%. Sau 7 ngày, sản phẩm được tiếp nhận bảo hành chính hãng từ 12 đến 24 tháng theo tiêu chuẩn của nhà máy.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-headphone-line"></i> Cần Hỗ Trợ Trực Tiếp?</h2>
+                <div class="static-card-content">
+                    <p>Nếu bạn không tìm thấy câu trả lời cho vấn đề của mình, hãy liên hệ ngay với đội ngũ chăm sóc khách hàng của chúng tôi:</p>
+                </div>
+                <div class="static-feature-grid">
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-phone-line"></i></div>
+                        <h4>Tổng Đài CSKH</h4>
+                        <p>1900 8888 (Hoạt động 8:00 - 21:30 hàng ngày, kể cả T7 & CN)</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-mail-send-line"></i></div>
+                        <h4>Email Hỗ Trợ</h4>
+                        <p>support@novashop.vn (Phản hồi giải quyết trong vòng 2 giờ làm việc)</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-chat-smile-2-line"></i></div>
+                        <h4>Trợ Lý AI Trực Tuyến</h4>
+                        <p>Bấm vào biểu tượng Chat AI ở góc dưới bên phải để nhận tư vấn tức thì</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
+    `;
+};
+const renderGuideView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-book-open-line"></i> Hướng dẫn</div>
+                <h1 class="static-hero-title">Hướng Dẫn Mua Hàng & Đặt Hàng Trực Tuyến</h1>
+                <p class="static-hero-subtitle">
+                    Quy trình mua sắm 4 bước đơn giản, nhanh chóng và an toàn tại hệ thống thương mại điện tử NovaShop.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-list-ordered"></i> 4 Bước Đặt Hàng Nhanh Chóng</h2>
+                <div class="static-step-list">
+                    <div class="static-step-item">
+                        <div class="static-step-number">1</div>
+                        <div class="static-step-info">
+                            <h4>Tìm kiếm & Lựa chọn sản phẩm</h4>
+                            <p>Nhập tên sản phẩm, dòng máy hoặc thương hiệu vào thanh tìm kiếm hoặc khám phá theo danh mục sản phẩm. Bấm vào sản phẩm để xem hình ảnh sắc nét, cấu hình chi tiết và các đánh giá thực tế.</p>
+                        </div>
+                    </div>
+
+                    <div class="static-step-item">
+                        <div class="static-step-number">2</div>
+                        <div class="static-step-info">
+                            <h4>Thêm vào Giỏ Hàng & Kiểm tra số lượng</h4>
+                            <p>Chọn số lượng sản phẩm mong muốn rồi bấm "Thêm vào giỏ" hoặc chọn "Mua ngay" để đến thẳng trang thanh toán. Bạn có thể kiểm tra lại danh sách các món đồ trong giỏ hàng bất kỳ lúc nào.</p>
+                        </div>
+                    </div>
+
+                    <div class="static-step-item">
+                        <div class="static-step-number">3</div>
+                        <div class="static-step-info">
+                            <h4>Điền thông tin giao nhận & Chọn hình thức thanh toán</h4>
+                            <p>Nhập chính xác Họ tên, Số điện thoại và Địa chỉ giao hàng cụ thể. Sau đó lựa chọn phương thức thanh toán phù hợp: Thanh toán khi nhận hàng (COD) hoặc Chuyển khoản ngân hàng.</p>
+                        </div>
+                    </div>
+
+                    <div class="static-step-item">
+                        <div class="static-step-number">4</div>
+                        <div class="static-step-info">
+                            <h4>Xác nhận đơn hàng & Theo dõi lộ trình vận chuyển</h4>
+                            <p>Bấm "Hoàn tất đặt hàng". Mã đơn hàng sẽ được khởi tạo ngay lập tức. Bạn có thể truy cập mục "Đơn mua" trên thanh điều hướng để theo dõi tiến độ chuẩn bị hàng và giao hàng từng bước.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-shield-star-line"></i> Lưu Ý Quan Trọng Khi Nhận Hàng</h2>
+                <div class="static-card-content">
+                    <p>
+                        Khi nhân viên giao hàng tới, bạn hãy kiểm tra tem niêm phong bên ngoài hộp kiện hàng. Hãy đảm bảo tem nguyên vẹn, không có dấu hiệu bị rách hoặc bóc trước khi ký nhận.
+                    </p>
+                    <p>
+                        Khách hàng nên quay video ngắn quá trình khui hộp kiện hàng để làm cơ sở đối chiếu giải quyết nhanh nhất trong trường hợp hy hữu xảy ra lỗi hoặc thất lạc phụ kiện.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
+    `;
+};
+const renderShippingView = () => {
+    return `
+    ${renderHeaderTemplate()}
+    <main class="static-page-main">
+        <div class="static-container">
+            <div class="static-hero">
+                <div class="static-hero-badge"><i class="ri-truck-line"></i> Vận chuyển & Giao nhận</div>
+                <h1 class="static-hero-title">Chính Sách Vận Chuyển Toàn Quốc</h1>
+                <p class="static-hero-subtitle">
+                    Cam kết giao hàng đúng hẹn, đóng gói cẩn thận chống sốc và bảo hiểm 100% giá trị sản phẩm trong suốt hành trình vận chuyển.
+                </p>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-price-tag-3-line"></i> Biểu Phí Vận Chuyển</h2>
+                <div class="static-feature-grid">
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-gift-line"></i></div>
+                        <h4>Miễn Phí Vận Chuyển</h4>
+                        <p>Áp dụng tự động cho tất cả đơn hàng có tổng giá trị từ 500.000 VNĐ trở lên trên phạm vi cả nước.</p>
+                    </div>
+                    <div class="static-feature-box">
+                        <div class="static-feature-icon"><i class="ri-money-cny-box-line"></i></div>
+                        <h4>Đồng Giá 30.000 VNĐ</h4>
+                        <p>Áp dụng cho các đơn hàng có giá trị dưới 500.000 VNĐ tại mọi tỉnh thành không phân biệt vùng miền.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-time-line"></i> Thời Gian Giao Hàng Dự Kiến</h2>
+                <div class="static-card-content">
+                    <p>
+                        <strong>Khu vực Nội thành Hà Nội & TP. Hồ Chí Minh:</strong> Đơn hàng được xử lý và giao ngay trong ngày (hoặc hỏa tốc trong 2 đến 4 giờ theo yêu cầu).
+                    </p>
+                    <p>
+                        <strong>Khu vực Ngoại thành & Các tỉnh thành lân cận:</strong> Thời gian phát hàng từ 1 đến 2 ngày làm việc.
+                    </p>
+                    <p>
+                        <strong>Các tỉnh miền Trung, Tây Nguyên & Vùng xa:</strong> Thời gian giao hàng từ 2 đến 3 ngày làm việc thông qua các đơn vị chuyển phát nhanh hàng đầu (Viettel Post, GHN).
+                    </p>
+                </div>
+            </div>
+
+            <div class="static-card">
+                <h2 class="static-card-title"><i class="ri-box-3-line"></i> Quy Chuẩn Đóng Gói Chống Va Đập</h2>
+                <div class="static-card-content">
+                    <p>
+                        Mọi sản phẩm công nghệ trước khi xuất kho đều được bọc 3 lớp màng bóng khí chống sốc chuyên dụng, đặt trong thùng carton cứng có chèn đệm góc và dán tem cảnh báo hàng dễ vỡ nguyên vẹn.
+                    </p>
+                    <p>
+                        Toàn bộ đơn hàng đều được mua bảo hiểm hàng hóa 100%. Nếu xảy ra trường hợp móp méo, ướt hoặc hư hỏng trong quá trình vận chuyển, NovaShop cam kết đổi mới ngay lập tức cho quý khách mà không phát sinh bất kỳ khoản phí nào.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+    ${renderFooterTemplate()}
     `;
 };
 const renderChatWidgetTemplate = () => {
@@ -253,71 +798,88 @@ const renderStorefrontView = () => {
     ${renderHeaderTemplate()}
 
     <main>
-        <section class="hero-section">
+        <section class="shopee-banner-section">
             <div class="container">
-                <div class="hero-banner">
-                    <div class="hero-content">
-                        <div class="hero-tag">
-                            <i class="ri-fire-fill"></i> Ưu đãi công nghệ đỉnh cao 2026
-                        </div>
-                        <h1 class="hero-title">
-                            Nâng Tầm Trải Nghiệm <br>
-                            <span class="hero-highlight">Mua Sắm Đẳng Cấp</span>
-                        </h1>
-                        <p class="hero-subtitle">
-                            Hệ thống thương mại điện tử phân tán thế hệ mới trên nền tảng Microservices và API Gateway tốc độ cao.
-                        </p>
-                        <div class="hero-actions">
-                            <a href="#productsSection" class="btn btn-primary btn-lg">
-                                <span>Khám Phá Sản Phẩm</span>
+                <div class="shopee-banner-grid">
+                    <div class="shopee-main-slider">
+                        <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&q=80" alt="Banner Siêu Sale" class="shopee-slider-bg">
+                        <div class="shopee-slider-content">
+                            <div class="shopee-slider-tag">
+                                <i class="ri-flashlight-fill" style="color: #ffd839;"></i> SIÊU SALE CÔNG NGHỆ 2026
+                            </div>
+                            <h2 class="shopee-slider-title">Giảm Đến 50%<br>Hàng Hiệu NovaMall</h2>
+                            <p class="shopee-slider-desc">Voucher giảm thêm 100K • Miễn phí vận chuyển toàn quốc 0Đ</p>
+                            <a href="#flashSaleSection" class="btn btn-primary btn-sm">
+                                <span>Săn Deal Chớp Nhoáng</span>
                                 <i class="ri-arrow-right-line"></i>
                             </a>
                         </div>
                     </div>
-                    <div class="hero-showcase">
-                        <div class="hero-img-card">
-                            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80" alt="Sản phẩm nổi bật">
-                        </div>
+                    <div class="shopee-sub-banners">
+                        <a href="#productsSection" class="shopee-sub-banner-item shopee-sub-banner-1">
+                            <div>
+                                <div class="shopee-sub-banner-title">👑 NovaMall Chính Hãng</div>
+                                <div class="shopee-sub-banner-desc">100% chính hãng • Đổi trả miễn phí 7 ngày</div>
+                            </div>
+                        </a>
+                        <a href="#flashSaleSection" class="shopee-sub-banner-item shopee-sub-banner-2">
+                            <div>
+                                <div class="shopee-sub-banner-title">⚡ Flash Sale Mỗi Ngày</div>
+                                <div class="shopee-sub-banner-desc">Khung giờ vàng giá sốc từ 99K</div>
+                            </div>
+                        </a>
                     </div>
                 </div>
 
-                <div class="trust-features">
-                    <div class="trust-item">
-                        <div class="trust-icon-box trust-box-1">
-                            <i class="ri-truck-line"></i>
+                <div class="shopee-quick-services">
+                    <a href="#flashSaleSection" class="quick-service-item">
+                        <div class="quick-service-icon-box" style="background: #fee2e2; color: #ef4444;">
+                            <i class="ri-flashlight-fill"></i>
                         </div>
-                        <div>
-                            <div class="trust-title">Giao Hàng Siêu Tốc</div>
-                            <div class="trust-desc">Nội thành chỉ trong 2 giờ</div>
+                        <span class="quick-service-label">Flash Sale</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-service-toast="Mã Giảm Giá: Đã lưu voucher giảm 50% vào ví của bạn!">
+                        <div class="quick-service-icon-box" style="background: #fef3c7; color: #f59e0b;">
+                            <i class="ri-ticket-2-fill"></i>
                         </div>
-                    </div>
-                    <div class="trust-item">
-                        <div class="trust-icon-box trust-box-2">
-                            <i class="ri-shield-check-line"></i>
+                        <span class="quick-service-label">Mã Giảm Giá</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-service-toast="Freeship Xtra: Áp dụng miễn phí vận chuyển 0Đ cho mọi đơn hàng!">
+                        <div class="quick-service-icon-box" style="background: #dcfce7; color: #10b981;">
+                            <i class="ri-truck-fill"></i>
                         </div>
-                        <div>
-                            <div class="trust-title">100% Chính Hãng</div>
-                            <div class="trust-desc">Bảo hành điện tử toàn quốc</div>
+                        <span class="quick-service-label">Freeship Xtra</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-service-toast="NovaMall: Gian hàng chính hãng cam kết đền bù 200% nếu phát hiện hàng giả!">
+                        <div class="quick-service-icon-box" style="background: #ede9fe; color: #8b5cf6;">
+                            <i class="ri-vip-crown-fill"></i>
                         </div>
-                    </div>
-                    <div class="trust-item">
-                        <div class="trust-icon-box trust-box-3">
-                            <i class="ri-exchange-box-line"></i>
+                        <span class="quick-service-label">NovaMall</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-quick-category="cat_electronics">
+                        <div class="quick-service-icon-box" style="background: #e0f2fe; color: #0284c7;">
+                            <i class="ri-headphone-fill"></i>
                         </div>
-                        <div>
-                            <div class="trust-title">Đổi Trả Dễ Dàng</div>
-                            <div class="trust-desc">Miễn phí đổi trả trong 7 ngày</div>
+                        <span class="quick-service-label">Điện Tử</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-quick-category="cat_fashion">
+                        <div class="quick-service-icon-box" style="background: #fce7f3; color: #ec4899;">
+                            <i class="ri-t-shirt-fill"></i>
                         </div>
-                    </div>
-                    <div class="trust-item">
-                        <div class="trust-icon-box trust-box-4">
-                            <i class="ri-customer-service-2-line"></i>
+                        <span class="quick-service-label">Thời Trang</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-quick-category="cat_home">
+                        <div class="quick-service-icon-box" style="background: #fae8ff; color: #a855f7;">
+                            <i class="ri-home-wifi-fill"></i>
                         </div>
-                        <div>
-                            <div class="trust-title">Hỗ Trợ 24/7</div>
-                            <div class="trust-desc">Tư vấn tận tình chu đáo</div>
+                        <span class="quick-service-label">Gia Dụng</span>
+                    </a>
+                    <a href="#productsSection" class="quick-service-item" data-quick-category="cat_books">
+                        <div class="quick-service-icon-box" style="background: #ffedd5; color: #f97316;">
+                            <i class="ri-book-open-fill"></i>
                         </div>
-                    </div>
+                        <span class="quick-service-label">Sách Hay</span>
+                    </a>
                 </div>
             </div>
         </section>
@@ -851,6 +1413,34 @@ const renderApp = () => {
         appEl.innerHTML = renderRegisterView();
         initRegisterView();
     }
+    else if (path === '/about') {
+        document.title = 'Giới Thiệu Về NovaShop | Hệ Thống Bán Lẻ Công Nghệ';
+        appEl.innerHTML = renderAboutView();
+    }
+    else if (path === '/careers') {
+        document.title = 'Tuyển Dụng & Cơ Hội Nghề Nghiệp | NovaShop';
+        appEl.innerHTML = renderCareersView();
+    }
+    else if (path === '/terms') {
+        document.title = 'Điều Khoản Dịch Vụ | NovaShop';
+        appEl.innerHTML = renderTermsView();
+    }
+    else if (path === '/privacy') {
+        document.title = 'Chính Sách Bảo Mật Quyền Riêng Tư | NovaShop';
+        appEl.innerHTML = renderPrivacyView();
+    }
+    else if (path === '/help') {
+        document.title = 'Trung Tâm Trợ Giúp & FAQ | NovaShop';
+        appEl.innerHTML = renderHelpView();
+    }
+    else if (path === '/guide') {
+        document.title = 'Hướng Dẫn Mua Hàng & Đặt Hàng | NovaShop';
+        appEl.innerHTML = renderGuideView();
+    }
+    else if (path === '/shipping') {
+        document.title = 'Chính Sách Vận Chuyển Toàn Quốc | NovaShop';
+        appEl.innerHTML = renderShippingView();
+    }
     else {
         document.title = 'NovaShop | Mua Sắm Trực Tuyến Chính Hãng';
         appEl.innerHTML = renderStorefrontView();
@@ -894,6 +1484,130 @@ const initStorefrontView = () => {
     initFlashSaleCountdown();
     bindStorefrontControls();
     initChatWidget();
+};
+const POPULAR_SEARCH_KEYWORDS = [
+    'Tai nghe Sony WH-1000XM5',
+    'Bàn phím cơ Keychron',
+    'Apple Watch Series 9',
+    'Chuột Logitech MX Master',
+    'Màn hình 4K LG',
+    'Tai nghe bluetooth',
+    'Bàn phím gaming'
+];
+const initSearchSuggestions = () => {
+    const input = document.getElementById('searchInput');
+    const dropdown = document.getElementById('searchSuggestionsDropdown');
+    if (!input || !dropdown)
+        return;
+    const renderSuggestions = (query) => {
+        const q = query.trim().toLowerCase();
+        if (!q) {
+            dropdown.innerHTML = `
+                <div class="suggestion-header">
+                    <span><i class="ri-fire-fill" style="color: #ee4d2d;"></i> Tìm kiếm phổ biến</span>
+                </div>
+                <div class="suggestion-tag-list">
+                    ${POPULAR_SEARCH_KEYWORDS.map(kw => `
+                        <span class="suggestion-tag" data-kw="${kw}">
+                            <i class="ri-search-line"></i> ${kw}
+                        </span>
+                    `).join('')}
+                </div>
+            `;
+        }
+        else {
+            const matchedProducts = state.products.filter(p => p.name.toLowerCase().includes(q) ||
+                (p.categoryName && p.categoryName.toLowerCase().includes(q)) ||
+                p.category.toLowerCase().includes(q)).slice(0, 5);
+            const matchedKeywords = POPULAR_SEARCH_KEYWORDS.filter(kw => kw.toLowerCase().includes(q));
+            let html = `
+                <div class="suggestion-header">
+                    <span>Gợi ý cho "${escapeHtml(query)}"</span>
+                    <span>${matchedProducts.length} sản phẩm</span>
+                </div>
+            `;
+            if (matchedKeywords.length > 0) {
+                html += `
+                    <div class="suggestion-tag-list">
+                        ${matchedKeywords.map(kw => `
+                            <span class="suggestion-tag" data-kw="${kw}">
+                                <i class="ri-search-line"></i> ${kw}
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            if (matchedProducts.length > 0) {
+                html += matchedProducts.map(p => `
+                    <div class="suggestion-item-row" data-prod-id="${p.id}" data-prod-name="${escapeHtml(p.name)}">
+                        <img src="${p.imageUrl}" alt="${p.name}" class="suggestion-thumb">
+                        <div class="suggestion-info">
+                            <div class="suggestion-title">${p.name}</div>
+                            <div class="suggestion-cat">${p.categoryName || p.category}</div>
+                        </div>
+                        <div class="suggestion-price">${formatPrice(p.price)}</div>
+                    </div>
+                `).join('');
+            }
+            else if (matchedKeywords.length === 0) {
+                html += `
+                    <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.875rem;">
+                        Nhấn <kbd>Enter</kbd> để tìm kiếm "${escapeHtml(query)}"
+                    </div>
+                `;
+            }
+            dropdown.innerHTML = html;
+        }
+        dropdown.querySelectorAll('[data-kw]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const kw = el.getAttribute('data-kw') || '';
+                input.value = kw;
+                state.searchQuery = kw;
+                dropdown.classList.remove('active');
+                fetchProducts();
+            });
+        });
+        dropdown.querySelectorAll('.suggestion-item-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const prodId = row.getAttribute('data-prod-id');
+                const prodName = row.getAttribute('data-prod-name') || '';
+                const found = state.products.find(p => p.id.toString() === prodId?.toString());
+                dropdown.classList.remove('active');
+                if (found) {
+                    openShopeeDetail(found);
+                }
+                else {
+                    input.value = prodName;
+                    state.searchQuery = prodName;
+                    fetchProducts();
+                }
+            });
+        });
+    };
+    input.addEventListener('focus', () => {
+        renderSuggestions(input.value);
+        dropdown.classList.add('active');
+    });
+    input.addEventListener('input', () => {
+        renderSuggestions(input.value);
+        dropdown.classList.add('active');
+    });
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!target.closest('.search-container-group')) {
+            dropdown.classList.remove('active');
+        }
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            dropdown.classList.remove('active');
+        }
+        else if (e.key === 'Enter') {
+            dropdown.classList.remove('active');
+        }
+    });
 };
 const bindStorefrontControls = () => {
     const searchInput = document.getElementById('searchInput');
@@ -1032,6 +1746,42 @@ const bindStorefrontControls = () => {
             fetchProducts();
         });
     }
+    initSearchSuggestions();
+    document.querySelectorAll('.hot-keyword-tag').forEach((tag) => {
+        tag.addEventListener('click', () => {
+            const kw = tag.getAttribute('data-search-kw') || '';
+            if (searchInput)
+                searchInput.value = kw;
+            state.searchQuery = kw;
+            fetchProducts();
+        });
+    });
+    document.querySelectorAll('[data-service-toast]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const msg = btn.getAttribute('data-service-toast');
+            if (msg)
+                showToast('Ưu Đãi Shopee', msg, 'success');
+        });
+    });
+    document.querySelectorAll('[data-quick-category]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const catId = btn.getAttribute('data-quick-category');
+            if (catId) {
+                state.activeCategory = catId;
+                const tab = document.querySelector(`.category-pill[data-category="${catId}"]`);
+                if (tab) {
+                    document.querySelectorAll('.category-pill').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                }
+                fetchProducts();
+                const prodSec = document.getElementById('productsSection');
+                if (prodSec)
+                    prodSec.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
     const modalCloseBtn = document.querySelector('[data-close-modal="quickviewModal"]');
     const modal = document.getElementById('quickviewModal');
     if (modalCloseBtn && modal) {
@@ -1353,7 +2103,7 @@ const initFlashSaleCountdown = () => {
             secEl.textContent = s.toString().padStart(2, '0');
     }, 1000);
 };
-const openShopeeDetail = (product) => {
+function openShopeeDetail(product) {
     state.activeProduct = product;
     state.selectedQty = 1;
     const variants = product.variants && product.variants.length > 0 ? product.variants : [];
@@ -1366,6 +2116,7 @@ const openShopeeDetail = (product) => {
             return null;
         return variants.find(v => v.color === state.selectedColor && v.type === state.selectedType)
             || variants.find(v => v.color === state.selectedColor)
+            || variants.find(v => v.type === state.selectedType)
             || variants[0];
     };
     state.selectedVariant = findCurrentVariant();
@@ -1448,11 +2199,16 @@ const openShopeeDetail = (product) => {
                         <div class="shopee-variant-row">
                             <div class="shopee-variant-label">Màu Sắc</div>
                             <div class="shopee-variant-options">
-                                ${uniqueColors.map(color => `
+                                ${uniqueColors.map(color => {
+            const sampleVar = variants.find(varItem => varItem.color === color && varItem.imageUrl);
+            const thumbImg = sampleVar ? `<img src="${sampleVar.imageUrl}" class="shopee-option-btn-thumb" alt="${color}">` : '';
+            return `
                                     <button class="shopee-option-btn ${color === state.selectedColor ? 'active' : ''}" data-color="${color}" type="button">
-                                        ${color}
+                                        ${thumbImg}
+                                        <span>${color}</span>
                                     </button>
-                                `).join('')}
+                                    `;
+        }).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -1463,7 +2219,7 @@ const openShopeeDetail = (product) => {
                             <div class="shopee-variant-options">
                                 ${uniqueTypes.map(type => `
                                     <button class="shopee-option-btn ${type === state.selectedType ? 'active' : ''}" data-type="${type}" type="button">
-                                        ${type}
+                                        <span>${type}</span>
                                     </button>
                                 `).join('')}
                             </div>
@@ -1530,17 +2286,34 @@ const openShopeeDetail = (product) => {
         content.querySelectorAll('.shopee-thumb-item').forEach((thumb) => {
             thumb.addEventListener('click', () => {
                 const imgUrl = thumb.getAttribute('data-thumb');
-                const mainImg = document.getElementById('shopeeMainImg');
-                if (mainImg && imgUrl)
-                    mainImg.src = imgUrl;
-                content.querySelectorAll('.shopee-thumb-item').forEach(t => t.classList.remove('active'));
-                thumb.classList.add('active');
+                if (!imgUrl)
+                    return;
+                const matchedVariant = variants.find(v => v.imageUrl === imgUrl);
+                if (matchedVariant) {
+                    if (matchedVariant.color)
+                        state.selectedColor = matchedVariant.color;
+                    if (matchedVariant.type)
+                        state.selectedType = matchedVariant.type;
+                    state.selectedVariant = matchedVariant;
+                    renderShopeeModal();
+                }
+                else {
+                    const mainImg = document.getElementById('shopeeMainImg');
+                    if (mainImg)
+                        mainImg.src = imgUrl;
+                    content.querySelectorAll('.shopee-thumb-item').forEach(t => t.classList.remove('active'));
+                    thumb.classList.add('active');
+                }
             });
         });
         content.querySelectorAll('[data-color]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 state.selectedColor = btn.getAttribute('data-color') || '';
-                state.selectedVariant = findCurrentVariant();
+                const matched = findCurrentVariant();
+                state.selectedVariant = matched;
+                if (matched && matched.type) {
+                    state.selectedType = matched.type;
+                }
                 renderShopeeModal();
             });
         });
@@ -1574,14 +2347,20 @@ const openShopeeDetail = (product) => {
         const addCartBtn = document.getElementById('shopeeAddCartBtn');
         if (addCartBtn) {
             addCartBtn.addEventListener('click', () => {
-                addItemToCart(product, state.selectedQty, state.selectedVariant?.name);
+                const varLabel = state.selectedVariant
+                    ? (state.selectedVariant.name || `${state.selectedColor} ${state.selectedType}`.trim())
+                    : undefined;
+                addItemToCart(product, state.selectedQty, varLabel);
                 modal.classList.remove('active');
             });
         }
         const buyNowBtn = document.getElementById('shopeeBuyNowBtn');
         if (buyNowBtn) {
             buyNowBtn.addEventListener('click', () => {
-                addItemToCart(product, state.selectedQty, state.selectedVariant?.name);
+                const varLabel = state.selectedVariant
+                    ? (state.selectedVariant.name || `${state.selectedColor} ${state.selectedType}`.trim())
+                    : undefined;
+                addItemToCart(product, state.selectedQty, varLabel);
                 modal.classList.remove('active');
                 navigate('/cart');
             });
@@ -1589,11 +2368,10 @@ const openShopeeDetail = (product) => {
     };
     renderShopeeModal();
     modal.classList.add('active');
-};
+}
 const addItemToCart = (product, quantity = 1, variantName) => {
-    const itemPrice = state.selectedVariant && state.selectedVariant.name === variantName
-        ? state.selectedVariant.price
-        : product.price;
+    const itemPrice = state.selectedVariant ? state.selectedVariant.price : product.price;
+    const itemImage = state.selectedVariant?.imageUrl || product.imageUrl;
     const existingIndex = state.cart.findIndex(item => item.productId === product.id && item.variantName === variantName);
     if (existingIndex > -1) {
         state.cart[existingIndex].quantity += quantity;
@@ -1604,7 +2382,7 @@ const addItemToCart = (product, quantity = 1, variantName) => {
             productId: product.id,
             name: product.name,
             price: itemPrice,
-            imageUrl: product.imageUrl,
+            imageUrl: itemImage,
             quantity: quantity,
             variantName: variantName
         });
