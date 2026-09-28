@@ -45,12 +45,59 @@ app.use((0, http_proxy_middleware_1.createProxyMiddleware)({
 }));
 app.use('/admin/css', express_1.default.static(path_1.default.join(__dirname, '../../admin/css')));
 app.use('/admin/js', express_1.default.static(path_1.default.join(__dirname, '../../admin/js')));
+const getAdminShell = () => `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | NovaShop Quản Trị</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/variables.css">
+  <link rel="stylesheet" href="/admin/css/base.css">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link rel="stylesheet" href="/admin/css/modals.css">
+  <link rel="stylesheet" href="/admin/css/admin-login.css">
+</head>
+<body>
+  <div id="admin-app"></div>
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/admin/js/admin.js"></script>
+</body>
+</html>`;
+const getClientShell = () => `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaShop | Mua Sắm Trực Tuyến Chính Hãng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/navbar.css">
+  <link rel="stylesheet" href="/css/storefront.css">
+  <link rel="stylesheet" href="/css/modals.css">
+  <link rel="stylesheet" href="/css/cart.css">
+  <link rel="stylesheet" href="/css/orders.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/js/app.js"></script>
+</body>
+</html>`;
 app.get(['/admin', '/admin/*'], (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../admin/index.html'));
+    res.type('html').send(getAdminShell());
 });
 app.use(express_1.default.static(path_1.default.join(__dirname, '../../client')));
 app.get('*', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../client/index.html'));
+    res.type('html').send(getClientShell());
 });
 app.listen(config_1.default.port, () => {
     console.log(`API Gateway is running on port ${config_1.default.port}`);
