@@ -488,13 +488,22 @@ const getVariantsByProductId = async (productId) => {
   return rows;
 };
 
-const findAll = async ({ category, search, minPrice, maxPrice, sort, flashSale } = {}) => {
+const findAll = async ({ category, search, minPrice, maxPrice, sort, flashSale, minRating, inStock } = {}) => {
   const db = await initDb();
   let query = 'SELECT * FROM products WHERE 1=1';
   const params = [];
 
-  if (flashSale === '1' || flashSale === true) {
+  if (flashSale === '1' || flashSale === true || flashSale === 'true') {
     query += ' AND isFlashSale = 1';
+  }
+
+  if (inStock === '1' || inStock === true || inStock === 'true') {
+    query += ' AND stock > 0';
+  }
+
+  if (minRating) {
+    query += ' AND rating >= ?';
+    params.push(Number(minRating));
   }
 
   if (category && category !== 'cat_all') {
@@ -524,6 +533,8 @@ const findAll = async ({ category, search, minPrice, maxPrice, sort, flashSale }
     query += ' ORDER BY price DESC';
   } else if (sort === 'rating') {
     query += ' ORDER BY rating DESC';
+  } else if (sort === 'popular') {
+    query += ' ORDER BY soldCount DESC, rating DESC';
   } else {
     query += ' ORDER BY createdAt DESC';
   }

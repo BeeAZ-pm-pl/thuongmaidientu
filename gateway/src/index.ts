@@ -1,8 +1,8 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const config = require('./config');
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import config from './config';
 
 const app = express();
 
@@ -49,6 +49,14 @@ app.use(
   })
 );
 
+app.use(
+  createProxyMiddleware({
+    target: config.services.chat,
+    changeOrigin: true,
+    pathFilter: '/api/chat'
+  })
+);
+
 app.use('/admin/css', express.static(path.join(__dirname, '../../admin/css')));
 app.use('/admin/js', express.static(path.join(__dirname, '../../admin/js')));
 
@@ -85,3 +93,5 @@ app.get('*', (req, res) => {
 app.listen(config.port, () => {
   console.log(`API Gateway is running on port ${config.port}`);
 });
+
+export default app;

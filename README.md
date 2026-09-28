@@ -68,6 +68,7 @@ Dự án áp dụng kiến trúc phần mềm phân tán **Microservices** hiệ
 | **Product Service** | `8002` | Quản lý danh mục, sản phẩm, biến thể và trừ tồn kho |
 | **Order Service** | `8003` | Tiếp nhận đơn hàng, tính tiền, phát sự kiện vào RabbitMQ |
 | **Notification Service** | `8004` | Lắng nghe hàng đợi tin nhắn, tạo thông báo hệ thống |
+| **Chat & AI Service** | `8005` | Hỗ trợ Live Chat trực tuyến, tích hợp Google Gemini AI tư vấn sản phẩm |
 | **RabbitMQ Management** | `15672` | `http://localhost:15672` (User/Pass: `guest` / `guest`) |
 | **MySQL Server** | `3306` | CSDL tập trung / độc lập (`ecommerce_db`) |
 
@@ -136,6 +137,9 @@ cd services/order-service && npm install && node src/index.js
 
 # Khởi chạy Notification Service
 cd services/notification-service && npm install && node src/index.js
+
+# Khởi chạy Chat & AI Service
+cd services/chat-service && npm install && node src/index.js
 ```
 
 ---

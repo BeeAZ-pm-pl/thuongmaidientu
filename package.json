@@ -3,12 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start:gateway": "node gateway/src/index.js",
+    "build": "tsc -p gateway/tsconfig.json && tsc -p services/chat-service/tsconfig.json && tsc -p client/tsconfig.json && tsc -p admin/tsconfig.json",
+    "start:gateway": "node gateway/dist/index.js",
     "start:identity": "node services/identity-service/src/index.js",
     "start:product": "node services/product-service/src/index.js",
     "start:order": "node services/order-service/src/index.js",
     "start:notification": "node services/notification-service/src/index.js",
+    "start:chat": "node services/chat-service/dist/index.js",
     "start": "docker compose up --build",
     "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
   }
 }

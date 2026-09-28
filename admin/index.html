@@ -40,6 +40,11 @@
           <i class="ri-group-fill"></i>
           <span>Người Dùng & Phân Quyền</span>
         </div>
+        <div class="admin-nav-item" data-tab="chatTab">
+          <i class="ri-customer-service-2-fill"></i>
+          <span>Live Chat & CSKH</span>
+          <span id="adminChatUnreadBadge" class="nav-chat-badge" style="display: none;">0</span>
+        </div>
         <div class="admin-nav-item" data-tab="systemTab">
           <i class="ri-server-fill"></i>
           <span>Trạng Thái Hệ Thống</span>
@@ -198,6 +203,95 @@
                 <tbody id="usersTableBody">
                 </tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="chatTab" class="tab-view" style="display: none;">
+          <div class="chat-admin-grid">
+            
+            <div class="card-panel chat-sessions-panel">
+              <div class="panel-header" style="padding: 16px 20px;">
+                <div class="panel-title" style="font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                  <i class="ri-chat-smile-2-line" style="color: var(--primary);"></i>
+                  <span>Hội Thoại Khách Hàng</span>
+                </div>
+                <div class="panel-actions">
+                  <button id="refreshChatSessionsBtn" class="btn btn-outline btn-sm" title="Làm mới danh sách">
+                    <i class="ri-refresh-line"></i>
+                  </button>
+                </div>
+              </div>
+
+              
+              <div class="chat-sessions-filter">
+                <select id="filterChatStatus" class="form-select" style="font-size: 0.8125rem; padding: 6px 10px;">
+                  <option value="all">Tất cả phiên chat</option>
+                  <option value="human_waiting">⚠️ Cần nhân viên hỗ trợ</option>
+                  <option value="human_active">💬 Đang trao đổi với CSKH</option>
+                  <option value="ai">🤖 Trợ lý AI đang tư vấn</option>
+                  <option value="closed">🔒 Phiên đã đóng</option>
+                </select>
+              </div>
+
+              
+              <div id="adminChatSessionsList" class="chat-sessions-list">
+                <div class="empty-state" style="padding: 24px;">
+                  <i class="ri-loader-4-line ri-spin" style="font-size: 1.5rem; color: var(--primary);"></i>
+                  <div style="font-size: 0.8125rem; margin-top: 8px;">Đang tải danh sách...</div>
+                </div>
+              </div>
+            </div>
+
+            
+            <div class="card-panel chat-conversation-panel">
+              <div id="chatConversationEmpty" class="empty-state" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px;">
+                <i class="ri-chat-voice-line" style="font-size: 3rem; color: #94a3b8; margin-bottom: 12px;"></i>
+                <div style="font-weight: 600; color: var(--text-main); font-size: 1.0625rem;">Chọn một cuộc trò chuyện để hỗ trợ</div>
+                <div style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 4px;">Xem lịch sử trò chuyện AI và trả lời khách hàng trong thời gian thực.</div>
+              </div>
+
+              <div id="chatConversationActive" style="display: none; height: 100%; flex-direction: column;">
+                
+                <div class="chat-conv-header">
+                  <div class="chat-conv-user">
+                    <div class="user-avatar-circle" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                      <i class="ri-user-line"></i>
+                    </div>
+                    <div>
+                      <div id="activeCustomerName" style="font-weight: 700; color: var(--text-main); font-size: 0.9375rem;">Khách hàng</div>
+                      <div id="activeCustomerEmail" style="font-size: 0.75rem; color: var(--text-muted);">Mã phiên: ...</div>
+                    </div>
+                  </div>
+
+                  <div class="chat-conv-actions">
+                    <span id="activeSessionStatusBadge" class="session-status-pill pill-ai">Đang tải...</span>
+                    <button id="adminSwitchToAiBtn" class="btn btn-outline btn-sm" title="Chuyển lại cho Trợ lý Gemini AI">
+                      <i class="ri-robot-2-line"></i>
+                      <span>Chuyển AI</span>
+                    </button>
+                    <button id="adminCloseSessionBtn" class="btn btn-outline btn-sm" style="color: var(--accent); border-color: #fecdd3;" title="Đóng phiên">
+                      <i class="ri-checkbox-circle-line"></i>
+                      <span>Đóng phiên</span>
+                    </button>
+                  </div>
+                </div>
+
+                
+                <div id="adminChatMessagesContainer" class="admin-chat-messages">
+                </div>
+
+                
+                <div class="admin-chat-reply-box">
+                  <form id="adminReplyForm" style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="adminReplyInput" class="form-input" placeholder="Nhập câu trả lời để gửi tới khách hàng..." autocomplete="off" required>
+                    <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
+                      <i class="ri-send-plane-fill"></i>
+                      <span>Gửi phản hồi</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
             </div>
           </div>
         </section>

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "outDir": "./js",
+    "rootDir": "./ts",
+    "strict": false,
+    "skipLibCheck": true,
+    "removeComments": true
+  },
+  "include": ["ts/**/*"]
+}
