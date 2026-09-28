@@ -9,7 +9,7 @@
   "dependencies": {
     "amqplib": "^0.10.5",
     "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
+    "dotenv": "^18.0.3",
     "express": "^4.21.2",
     "mysql2": "^3.24.4"
   }
