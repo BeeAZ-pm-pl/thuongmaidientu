@@ -11,8 +11,8 @@ const getCategories = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const { category, search, minPrice, maxPrice, sort } = req.query;
-    const products = await productModel.findAll({ category, search, minPrice, maxPrice, sort });
+    const { category, search, minPrice, maxPrice, sort, flashSale, minRating, inStock } = req.query;
+    const products = await productModel.findAll({ category, search, minPrice, maxPrice, sort, flashSale, minRating, inStock });
     return res.json({
       success: true,
       total: products.length,

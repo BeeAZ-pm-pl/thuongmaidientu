@@ -69,6 +69,21 @@ services:
     volumes:
       - notification_data:/app/data
 
+  chat-service:
+    build:
+      context: ./services/chat-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-chat-service
+    ports:
+      - "8005:8005"
+    environment:
+      PORT: 8005
+      DB_HOST: host.docker.internal
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+    volumes:
+      - chat_data:/app/data
+
   api-gateway:
     build:
       context: ./gateway
@@ -82,11 +97,13 @@ services:
       PRODUCT_SERVICE_URL: http://product-service:8002
       ORDER_SERVICE_URL: http://order-service:8003
       NOTIFICATION_SERVICE_URL: http://notification-service:8004
+      CHAT_SERVICE_URL: http://chat-service:8005
     depends_on:
       - identity-service
       - product-service
       - order-service
       - notification-service
+      - chat-service
 
 volumes:
   rabbitmq_data:
@@ -94,3 +111,5 @@ volumes:
   product_data:
   order_data:
   notification_data:
+  chat_data:
+

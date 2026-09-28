@@ -1,6 +1,132 @@
 "use strict";
+
+interface ProductVariant {
+    name: string;
+    price: number;
+    stock: number;
+}
+
+interface Product {
+    id: string | number;
+    name: string;
+    category: string;
+    price: number;
+    originalPrice?: number;
+    rating?: number;
+    sold?: number;
+    stock: number;
+    imageUrl: string;
+    description?: string;
+    isFlashSale?: boolean;
+    flashSaleDiscount?: number;
+    variants?: ProductVariant[];
+    options?: {
+        colors?: string[];
+        types?: string[];
+    };
+}
+
+interface Category {
+    id: string;
+    name: string;
+    icon?: string;
+}
+
+interface CartItem {
+    id: string | number;
+    productId: string | number;
+    name: string;
+    price: number;
+    imageUrl: string;
+    quantity: number;
+    variantName?: string;
+}
+
+interface User {
+    id: string | number;
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    role?: string;
+}
+
+interface OrderItem {
+    id?: string | number;
+    productId: string | number;
+    name: string;
+    price: number;
+    quantity: number;
+    imageUrl?: string;
+    variantName?: string;
+}
+
+interface Order {
+    id: string | number;
+    userId: string | number;
+    customerName: string;
+    customerPhone: string;
+    shippingAddress: string;
+    paymentMethod: string;
+    totalAmount: number;
+    status: 'pending' | 'processing' | 'completed' | 'cancelled';
+    items: OrderItem[];
+    createdAt: string;
+}
+
+interface ChatMessage {
+    id: string | number;
+    sessionId: string;
+    sender: 'user' | 'ai' | 'admin' | 'system';
+    message: string;
+    productRecommendations?: Product[];
+    createdAt: string;
+}
+
+interface ChatSession {
+    id: string;
+    userId?: string | number | null;
+    guestName: string;
+    guestEmail: string;
+    status: 'ai' | 'human_waiting' | 'human_active' | 'closed';
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface AppState {
+    currentRoute: string;
+    products: Product[];
+    categories: Category[];
+    activeCategory: string;
+    searchQuery: string;
+    sortBy: string;
+    cart: CartItem[];
+    user: User | null;
+    token: string;
+    activeProduct: Product | null;
+    selectedColor: string;
+    selectedType: string;
+    selectedVariant: ProductVariant | null;
+    selectedQty: number;
+    minPrice: number | null;
+    maxPrice: number | null;
+    minRating: number | null;
+    inStock: boolean;
+    flashSaleFilter: boolean;
+    orders: Order[];
+    ordersLoading: boolean;
+    chatSessionId: string;
+    chatSession: ChatSession | null;
+    chatMessages: ChatMessage[];
+    chatOpen: boolean;
+    chatLoading: boolean;
+    chatPollingTimer: any;
+    flashCountdownTimer: any;
+}
+
 const API_BASE = window.location.origin;
-const state = {
+
+const state: AppState = {
     currentRoute: window.location.pathname || '/',
     products: [],
     categories: [],
@@ -30,15 +156,16 @@ const state = {
     chatPollingTimer: null,
     flashCountdownTimer: null
 };
-const formatPrice = (amount) => {
+
+const formatPrice = (amount: number): string => {
     return new Intl.NumberFormat('vi-VN', {
         style: 'currency',
         currency: 'VND'
     }).format(amount || 0);
 };
-const formatDate = (dateStr) => {
-    if (!dateStr)
-        return '';
+
+const formatDate = (dateStr: string): string => {
+    if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('vi-VN', {
         day: '2-digit',
@@ -48,7 +175,8 @@ const formatDate = (dateStr) => {
         minute: '2-digit'
     });
 };
-const showToast = (title, message, type = 'success') => {
+
+const showToast = (title: string, message: string, type: 'success' | 'error' | 'warning' = 'success'): void => {
     let container = document.getElementById('toastContainer');
     if (!container) {
         container = document.createElement('div');
@@ -56,11 +184,13 @@ const showToast = (title, message, type = 'success') => {
         container.className = 'toast-container';
         document.body.appendChild(container);
     }
+
     const icons = {
         success: 'ri-checkbox-circle-line',
         error: 'ri-error-warning-line',
         warning: 'ri-alert-line'
     };
+
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
@@ -70,6 +200,7 @@ const showToast = (title, message, type = 'success') => {
             <div class="toast-desc">${message}</div>
         </div>
     `;
+
     container.appendChild(toast);
     setTimeout(() => {
         toast.style.opacity = '0';
@@ -77,18 +208,21 @@ const showToast = (title, message, type = 'success') => {
         setTimeout(() => toast.remove(), 300);
     }, 3500);
 };
-const saveCart = () => {
+
+const saveCart = (): void => {
     localStorage.setItem('novashop_cart', JSON.stringify(state.cart));
     updateCartBadge();
 };
-const updateCartBadge = () => {
+
+const updateCartBadge = (): void => {
     const badge = document.getElementById('cartCountBadge');
     if (badge) {
         const totalCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
         badge.textContent = totalCount.toString();
     }
 };
-const renderHeaderTemplate = () => {
+
+const renderHeaderTemplate = (): string => {
     const cartCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
     const userMenuHtml = state.user
         ? `
@@ -115,6 +249,7 @@ const renderHeaderTemplate = () => {
             <span>Đăng Ký</span>
         </a>
         `;
+
     return `
     <header class="site-header">
         <div class="container nav-container">
@@ -146,7 +281,8 @@ const renderHeaderTemplate = () => {
     </header>
     `;
 };
-const renderFooterTemplate = () => {
+
+const renderFooterTemplate = (): string => {
     return `
     <footer class="site-footer">
         <div class="container">
@@ -190,7 +326,8 @@ const renderFooterTemplate = () => {
     </footer>
     `;
 };
-const renderChatWidgetTemplate = () => {
+
+const renderChatWidgetTemplate = (): string => {
     return `
     <button id="chatLauncherBtn" class="chat-launcher-btn" aria-label="Mở live chat hỗ trợ khách hàng" type="button">
         <i class="ri-customer-service-2-fill"></i>
@@ -248,7 +385,8 @@ const renderChatWidgetTemplate = () => {
     </div>
     `;
 };
-const renderStorefrontView = () => {
+
+const renderStorefrontView = (): string => {
     return `
     ${renderHeaderTemplate()}
 
@@ -451,7 +589,8 @@ const renderStorefrontView = () => {
     ${renderChatWidgetTemplate()}
     `;
 };
-const renderCartView = () => {
+
+const renderCartView = (): string => {
     return `
     <header class="cart-header">
         <div class="cart-header-container">
@@ -549,7 +688,8 @@ const renderCartView = () => {
     ${renderFooterTemplate()}
     `;
 };
-const renderOrdersView = () => {
+
+const renderOrdersView = (): string => {
     return `
     <header style="background: #ffffff; border-bottom: 1px solid var(--border-light); padding: 16px 0; box-shadow: var(--shadow-sm);">
         <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
@@ -600,7 +740,8 @@ const renderOrdersView = () => {
     ${renderFooterTemplate()}
     `;
 };
-const renderLoginView = () => {
+
+const renderLoginView = (): string => {
     return `
     <header class="auth-header">
         <div class="auth-header-container">
@@ -699,7 +840,8 @@ const renderLoginView = () => {
     </main>
     `;
 };
-const renderRegisterView = () => {
+
+const renderRegisterView = (): string => {
     return `
     <header class="auth-header">
         <div class="auth-header-container">
@@ -822,43 +964,44 @@ const renderRegisterView = () => {
     </main>
     `;
 };
-const renderApp = () => {
+
+const renderApp = (): void => {
     const appEl = document.getElementById('app');
-    if (!appEl)
-        return;
+    if (!appEl) return;
+
     if (state.flashCountdownTimer) {
         clearInterval(state.flashCountdownTimer);
         state.flashCountdownTimer = null;
     }
+
     const path = window.location.pathname;
+
     if (path === '/cart') {
         document.title = 'Giỏ Hàng & Đặt Hàng | NovaShop';
         appEl.innerHTML = renderCartView();
         initCartView();
-    }
-    else if (path === '/orders') {
+    } else if (path === '/orders') {
         document.title = 'Đơn Mua Của Tôi | NovaShop';
         appEl.innerHTML = renderOrdersView();
         initOrdersView();
-    }
-    else if (path === '/login') {
+    } else if (path === '/login') {
         document.title = 'Đăng Nhập Khách Hàng | NovaShop';
         appEl.innerHTML = renderLoginView();
         initLoginView();
-    }
-    else if (path === '/register') {
+    } else if (path === '/register') {
         document.title = 'Đăng Ký Tài Khoản | NovaShop';
         appEl.innerHTML = renderRegisterView();
         initRegisterView();
-    }
-    else {
+    } else {
         document.title = 'NovaShop | Mua Sắm Trực Tuyến Chính Hãng';
         appEl.innerHTML = renderStorefrontView();
         initStorefrontView();
     }
+
     bindGlobalNavigation();
 };
-const navigate = (path) => {
+
+const navigate = (path: string): void => {
     if (window.location.pathname !== path) {
         window.history.pushState(null, '', path);
     }
@@ -866,7 +1009,8 @@ const navigate = (path) => {
     renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
-const bindGlobalNavigation = () => {
+
+const bindGlobalNavigation = (): void => {
     document.querySelectorAll('[data-nav-link]').forEach((link) => {
         link.addEventListener('click', (e) => {
             const href = link.getAttribute('href');
@@ -876,6 +1020,7 @@ const bindGlobalNavigation = () => {
             }
         });
     });
+
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -888,29 +1033,33 @@ const bindGlobalNavigation = () => {
         });
     }
 };
-const initStorefrontView = () => {
+
+const initStorefrontView = (): void => {
     fetchCategories();
     fetchProducts();
     initFlashSaleCountdown();
     bindStorefrontControls();
     initChatWidget();
 };
-const bindStorefrontControls = () => {
-    const searchInput = document.getElementById('searchInput');
+
+const bindStorefrontControls = (): void => {
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement | null;
     const searchBtn = document.getElementById('searchBtn');
-    const sortSelect = document.getElementById('sortSelect');
+    const sortSelect = document.getElementById('sortSelect') as HTMLSelectElement | null;
     const clearSearchBtn = document.getElementById('clearSearchBtn');
-    const minPriceInput = document.getElementById('minPriceInput');
-    const maxPriceInput = document.getElementById('maxPriceInput');
+    const minPriceInput = document.getElementById('minPriceInput') as HTMLInputElement | null;
+    const maxPriceInput = document.getElementById('maxPriceInput') as HTMLInputElement | null;
     const applyPriceBtn = document.getElementById('applyPriceBtn');
-    const inStockCheckbox = document.getElementById('inStockCheckbox');
-    const flashSaleCheckbox = document.getElementById('flashSaleCheckbox');
+    const inStockCheckbox = document.getElementById('inStockCheckbox') as HTMLInputElement | null;
+    const flashSaleCheckbox = document.getElementById('flashSaleCheckbox') as HTMLInputElement | null;
     const resetAllFiltersBtn = document.getElementById('resetAllFiltersBtn');
+
     if (searchBtn && searchInput) {
         searchBtn.addEventListener('click', () => {
             state.searchQuery = searchInput.value.trim();
             fetchProducts();
         });
+
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 state.searchQuery = searchInput.value.trim();
@@ -918,6 +1067,7 @@ const bindStorefrontControls = () => {
             }
         });
     }
+
     if (clearSearchBtn && searchInput) {
         clearSearchBtn.addEventListener('click', () => {
             state.searchQuery = '';
@@ -925,12 +1075,14 @@ const bindStorefrontControls = () => {
             fetchProducts();
         });
     }
+
     if (sortSelect) {
         sortSelect.addEventListener('change', () => {
             state.sortBy = sortSelect.value;
             fetchProducts();
         });
     }
+
     document.querySelectorAll('#priceFilterPills .filter-pill').forEach((pill) => {
         pill.addEventListener('click', () => {
             document.querySelectorAll('#priceFilterPills .filter-pill').forEach(p => p.classList.remove('active'));
@@ -939,30 +1091,25 @@ const bindStorefrontControls = () => {
             if (priceType === 'under-1m') {
                 state.minPrice = null;
                 state.maxPrice = 1000000;
-            }
-            else if (priceType === '1m-5m') {
+            } else if (priceType === '1m-5m') {
                 state.minPrice = 1000000;
                 state.maxPrice = 5000000;
-            }
-            else if (priceType === '5m-10m') {
+            } else if (priceType === '5m-10m') {
                 state.minPrice = 5000000;
                 state.maxPrice = 10000000;
-            }
-            else if (priceType === 'over-10m') {
+            } else if (priceType === 'over-10m') {
                 state.minPrice = 10000000;
                 state.maxPrice = null;
-            }
-            else {
+            } else {
                 state.minPrice = null;
                 state.maxPrice = null;
             }
-            if (minPriceInput)
-                minPriceInput.value = state.minPrice ? state.minPrice.toString() : '';
-            if (maxPriceInput)
-                maxPriceInput.value = state.maxPrice ? state.maxPrice.toString() : '';
+            if (minPriceInput) minPriceInput.value = state.minPrice ? state.minPrice.toString() : '';
+            if (maxPriceInput) maxPriceInput.value = state.maxPrice ? state.maxPrice.toString() : '';
             fetchProducts();
         });
     });
+
     if (applyPriceBtn) {
         applyPriceBtn.addEventListener('click', () => {
             const min = minPriceInput ? parseFloat(minPriceInput.value) : NaN;
@@ -973,6 +1120,7 @@ const bindStorefrontControls = () => {
             fetchProducts();
         });
     }
+
     document.querySelectorAll('#ratingFilterPills .filter-pill').forEach((pill) => {
         pill.addEventListener('click', () => {
             document.querySelectorAll('#ratingFilterPills .filter-pill').forEach(p => p.classList.remove('active'));
@@ -982,18 +1130,21 @@ const bindStorefrontControls = () => {
             fetchProducts();
         });
     });
+
     if (inStockCheckbox) {
         inStockCheckbox.addEventListener('change', () => {
             state.inStock = inStockCheckbox.checked;
             fetchProducts();
         });
     }
+
     if (flashSaleCheckbox) {
         flashSaleCheckbox.addEventListener('change', () => {
             state.flashSaleFilter = flashSaleCheckbox.checked;
             fetchProducts();
         });
     }
+
     if (resetAllFiltersBtn) {
         resetAllFiltersBtn.addEventListener('click', () => {
             state.searchQuery = '';
@@ -1004,34 +1155,23 @@ const bindStorefrontControls = () => {
             state.inStock = false;
             state.flashSaleFilter = false;
             state.sortBy = 'newest';
-            if (searchInput)
-                searchInput.value = '';
-            if (minPriceInput)
-                minPriceInput.value = '';
-            if (maxPriceInput)
-                maxPriceInput.value = '';
-            if (inStockCheckbox)
-                inStockCheckbox.checked = false;
-            if (flashSaleCheckbox)
-                flashSaleCheckbox.checked = false;
-            if (sortSelect)
-                sortSelect.value = 'newest';
+            if (searchInput) searchInput.value = '';
+            if (minPriceInput) minPriceInput.value = '';
+            if (maxPriceInput) maxPriceInput.value = '';
+            if (inStockCheckbox) inStockCheckbox.checked = false;
+            if (flashSaleCheckbox) flashSaleCheckbox.checked = false;
+            if (sortSelect) sortSelect.value = 'newest';
             document.querySelectorAll('#priceFilterPills .filter-pill').forEach((p, idx) => {
-                if (idx === 0)
-                    p.classList.add('active');
-                else
-                    p.classList.remove('active');
+                if (idx === 0) p.classList.add('active'); else p.classList.remove('active');
             });
             document.querySelectorAll('#ratingFilterPills .filter-pill').forEach((p, idx) => {
-                if (idx === 0)
-                    p.classList.add('active');
-                else
-                    p.classList.remove('active');
+                if (idx === 0) p.classList.add('active'); else p.classList.remove('active');
             });
             fetchCategories();
             fetchProducts();
         });
     }
+
     const modalCloseBtn = document.querySelector('[data-close-modal="quickviewModal"]');
     const modal = document.getElementById('quickviewModal');
     if (modalCloseBtn && modal) {
@@ -1041,15 +1181,15 @@ const bindStorefrontControls = () => {
     }
     if (modal) {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal)
-                modal.classList.remove('active');
+            if (e.target === modal) modal.classList.remove('active');
         });
     }
 };
-const fetchCategories = async () => {
+
+const fetchCategories = async (): Promise<void> => {
     const tabsContainer = document.getElementById('categoryTabs');
-    if (!tabsContainer)
-        return;
+    if (!tabsContainer) return;
+
     try {
         const res = await fetch(`${API_BASE}/api/categories`);
         const data = await res.json();
@@ -1057,8 +1197,7 @@ const fetchCategories = async () => {
             state.categories = data.data;
             renderCategories();
         }
-    }
-    catch {
+    } catch {
         state.categories = [
             { id: 'cat_all', name: 'Tất Cả Sản Phẩm' },
             { id: 'cat_audio', name: 'Tai Nghe & Âm Thanh' },
@@ -1068,16 +1207,19 @@ const fetchCategories = async () => {
         renderCategories();
     }
 };
-const renderCategories = () => {
+
+const renderCategories = (): void => {
     const tabsContainer = document.getElementById('categoryTabs');
-    if (!tabsContainer)
-        return;
+    if (!tabsContainer) return;
+
     const allCat = [{ id: 'cat_all', name: 'Tất Cả Sản Phẩm' }, ...state.categories.filter(c => c.id !== 'cat_all')];
+
     tabsContainer.innerHTML = allCat.map((cat) => `
         <button class="category-tab ${state.activeCategory === cat.id ? 'active' : ''}" data-cat-id="${cat.id}" type="button">
             <span>${cat.name}</span>
         </button>
     `).join('');
+
     tabsContainer.querySelectorAll('.category-tab').forEach((tab) => {
         tab.addEventListener('click', () => {
             tabsContainer.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
@@ -1087,20 +1229,22 @@ const renderCategories = () => {
         });
     });
 };
-const fetchProducts = async () => {
+
+const fetchProducts = async (): Promise<void> => {
     const countEl = document.getElementById('productTotalCount');
     const gridEl = document.getElementById('productsGrid');
     const bannerEl = document.getElementById('searchActiveBanner');
     const keywordEl = document.getElementById('searchKeywordDisplay');
+
     if (bannerEl && keywordEl) {
         if (state.searchQuery) {
             bannerEl.style.display = 'flex';
             keywordEl.textContent = `"${state.searchQuery}"`;
-        }
-        else {
+        } else {
             bannerEl.style.display = 'none';
         }
     }
+
     if (gridEl) {
         gridEl.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 40px 0;">
@@ -1109,6 +1253,7 @@ const fetchProducts = async () => {
             </div>
         `;
     }
+
     try {
         const queryParams = new URLSearchParams();
         if (state.activeCategory && state.activeCategory !== 'cat_all') {
@@ -1135,31 +1280,31 @@ const fetchProducts = async () => {
         if (state.flashSaleFilter) {
             queryParams.append('flashSale', 'true');
         }
+
         const res = await fetch(`${API_BASE}/api/products?${queryParams.toString()}`);
         const data = await res.json();
+
         if (data.success && Array.isArray(data.data)) {
             state.products = data.data;
-            if (countEl)
-                countEl.textContent = `${state.products.length} sản phẩm phù hợp`;
+            if (countEl) countEl.textContent = `${state.products.length} sản phẩm phù hợp`;
             renderProductsGrid();
             renderFlashSaleGrid();
-        }
-        else {
+        } else {
             if (gridEl) {
                 gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">Không tìm thấy sản phẩm nào.</div>`;
             }
         }
-    }
-    catch {
+    } catch {
         if (gridEl) {
             gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--accent);">Không thể kết nối đến máy chủ sản phẩm.</div>`;
         }
     }
 };
-const renderProductsGrid = () => {
+
+const renderProductsGrid = (): void => {
     const gridEl = document.getElementById('productsGrid');
-    if (!gridEl)
-        return;
+    if (!gridEl) return;
+
     if (state.products.length === 0) {
         gridEl.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: #fff; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
@@ -1170,10 +1315,12 @@ const renderProductsGrid = () => {
         `;
         return;
     }
+
     gridEl.innerHTML = state.products.map((prod) => {
         const discountBadge = prod.originalPrice && prod.originalPrice > prod.price
             ? `<div class="product-badge badge-sale">-${Math.round((1 - prod.price / prod.originalPrice) * 100)}%</div>`
             : (prod.isFlashSale ? `<div class="product-badge badge-flash"><i class="ri-flashlight-fill"></i> Flash Sale</div>` : '');
+
         return `
         <div class="product-card" data-product-id="${prod.id}">
             <div class="product-thumb-wrapper">
@@ -1205,15 +1352,16 @@ const renderProductsGrid = () => {
         </div>
         `;
     }).join('');
+
     gridEl.querySelectorAll('.quickview-trigger').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const id = btn.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
-            if (found)
-                openQuickview(found);
+            if (found) openQuickview(found);
         });
     });
+
     gridEl.querySelectorAll('.add-to-cart-direct-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1225,15 +1373,17 @@ const renderProductsGrid = () => {
         });
     });
 };
-const renderFlashSaleGrid = () => {
+
+const renderFlashSaleGrid = (): void => {
     const gridEl = document.getElementById('flashSaleGrid');
-    if (!gridEl)
-        return;
+    if (!gridEl) return;
+
     const flashProducts = state.products.filter(p => p.isFlashSale || (p.originalPrice && p.originalPrice > p.price)).slice(0, 4);
     if (flashProducts.length === 0) {
         gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 20px;">Đang cập nhật các deal chớp nhoáng...</div>`;
         return;
     }
+
     gridEl.innerHTML = flashProducts.map((prod) => `
         <div class="flash-sale-card" data-id="${prod.id}">
             <div class="flash-thumb-box">
@@ -1250,44 +1400,47 @@ const renderFlashSaleGrid = () => {
             </div>
         </div>
     `).join('');
+
     gridEl.querySelectorAll('.flash-sale-card').forEach((card) => {
         card.addEventListener('click', () => {
             const id = card.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
-            if (found)
-                openQuickview(found);
+            if (found) openQuickview(found);
         });
     });
 };
-const initFlashSaleCountdown = () => {
+
+const initFlashSaleCountdown = (): void => {
     let secondsLeft = 2 * 3600 + 45 * 60 + 18;
     const hourEl = document.getElementById('flashHour');
     const minEl = document.getElementById('flashMin');
     const secEl = document.getElementById('flashSec');
+
     state.flashCountdownTimer = setInterval(() => {
         secondsLeft--;
-        if (secondsLeft <= 0)
-            secondsLeft = 3 * 3600;
+        if (secondsLeft <= 0) secondsLeft = 3 * 3600;
+
         const h = Math.floor(secondsLeft / 3600);
         const m = Math.floor((secondsLeft % 3600) / 60);
         const s = secondsLeft % 60;
-        if (hourEl)
-            hourEl.textContent = h.toString().padStart(2, '0');
-        if (minEl)
-            minEl.textContent = m.toString().padStart(2, '0');
-        if (secEl)
-            secEl.textContent = s.toString().padStart(2, '0');
+
+        if (hourEl) hourEl.textContent = h.toString().padStart(2, '0');
+        if (minEl) minEl.textContent = m.toString().padStart(2, '0');
+        if (secEl) secEl.textContent = s.toString().padStart(2, '0');
     }, 1000);
 };
-const openQuickview = (product) => {
+
+const openQuickview = (product: Product): void => {
     state.activeProduct = product;
     state.selectedQty = 1;
     state.selectedVariant = (product.variants && product.variants.length > 0) ? product.variants[0] : null;
+
     const modal = document.getElementById('quickviewModal');
     const content = document.getElementById('quickviewContent');
-    if (!modal || !content)
-        return;
+    if (!modal || !content) return;
+
     const hasVariants = product.variants && product.variants.length > 0;
+
     content.innerHTML = `
         <div class="modal-gallery">
             <img src="${product.imageUrl}" alt="${product.name}" class="modal-main-img">
@@ -1316,7 +1469,7 @@ const openQuickview = (product) => {
             <div style="margin-bottom: 16px;">
                 <div class="option-label">Phân Loại Sản Phẩm:</div>
                 <div class="option-pills" id="modalVariantPills">
-                    ${product.variants.map((v, i) => `
+                    ${product.variants!.map((v, i) => `
                         <div class="option-pill ${i === 0 ? 'selected' : ''}" data-idx="${i}">${v.name}</div>
                     `).join('')}
                 </div>
@@ -1342,11 +1495,14 @@ const openQuickview = (product) => {
             </div>
         </div>
     `;
+
     modal.classList.add('active');
-    const qtyInput = document.getElementById('modalQtyInput');
+
+    const qtyInput = document.getElementById('modalQtyInput') as HTMLInputElement | null;
     const minusBtn = document.getElementById('modalQtyMinus');
     const plusBtn = document.getElementById('modalQtyPlus');
     const priceDisplay = document.getElementById('modalPriceDisplay');
+
     if (minusBtn && qtyInput) {
         minusBtn.addEventListener('click', () => {
             if (state.selectedQty > 1) {
@@ -1355,6 +1511,7 @@ const openQuickview = (product) => {
             }
         });
     }
+
     if (plusBtn && qtyInput) {
         plusBtn.addEventListener('click', () => {
             if (state.selectedQty < product.stock) {
@@ -1363,6 +1520,7 @@ const openQuickview = (product) => {
             }
         });
     }
+
     document.querySelectorAll('#modalVariantPills .option-pill').forEach((pill) => {
         pill.addEventListener('click', () => {
             document.querySelectorAll('#modalVariantPills .option-pill').forEach(p => p.classList.remove('selected'));
@@ -1370,11 +1528,11 @@ const openQuickview = (product) => {
             const idx = parseInt(pill.getAttribute('data-idx') || '0', 10);
             if (product.variants && product.variants[idx]) {
                 state.selectedVariant = product.variants[idx];
-                if (priceDisplay)
-                    priceDisplay.textContent = formatPrice(state.selectedVariant.price);
+                if (priceDisplay) priceDisplay.textContent = formatPrice(state.selectedVariant.price);
             }
         });
     });
+
     const addCartBtn = document.getElementById('modalAddToCartBtn');
     if (addCartBtn) {
         addCartBtn.addEventListener('click', () => {
@@ -1382,6 +1540,7 @@ const openQuickview = (product) => {
             modal.classList.remove('active');
         });
     }
+
     const buyNowBtn = document.getElementById('modalBuyNowBtn');
     if (buyNowBtn) {
         buyNowBtn.addEventListener('click', () => {
@@ -1391,15 +1550,19 @@ const openQuickview = (product) => {
         });
     }
 };
-const addItemToCart = (product, quantity = 1, variantName) => {
+
+const addItemToCart = (product: Product, quantity: number = 1, variantName?: string): void => {
     const itemPrice = state.selectedVariant && state.selectedVariant.name === variantName
         ? state.selectedVariant.price
         : product.price;
-    const existingIndex = state.cart.findIndex(item => item.productId === product.id && item.variantName === variantName);
+
+    const existingIndex = state.cart.findIndex(
+        item => item.productId === product.id && item.variantName === variantName
+    );
+
     if (existingIndex > -1) {
         state.cart[existingIndex].quantity += quantity;
-    }
-    else {
+    } else {
         state.cart.push({
             id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
             productId: product.id,
@@ -1410,17 +1573,21 @@ const addItemToCart = (product, quantity = 1, variantName) => {
             variantName: variantName
         });
     }
+
     saveCart();
     showToast('Thành công', `Đã thêm ${quantity} sản phẩm vào giỏ hàng`, 'success');
 };
-const initCartView = () => {
+
+const initCartView = (): void => {
     renderCartItemsList();
+
     const checkoutForm = document.getElementById('checkoutSubmitForm');
-    const confirmBtn = document.getElementById('confirmOrderBtn');
-    const nameInput = document.getElementById('checkoutName');
-    const phoneInput = document.getElementById('checkoutPhone');
-    const addressInput = document.getElementById('checkoutAddress');
-    const paymentSelect = document.getElementById('checkoutPayment');
+    const confirmBtn = document.getElementById('confirmOrderBtn') as HTMLButtonElement | null;
+    const nameInput = document.getElementById('checkoutName') as HTMLInputElement | null;
+    const phoneInput = document.getElementById('checkoutPhone') as HTMLInputElement | null;
+    const addressInput = document.getElementById('checkoutAddress') as HTMLTextAreaElement | null;
+    const paymentSelect = document.getElementById('checkoutPayment') as HTMLSelectElement | null;
+
     if (checkoutForm && confirmBtn) {
         checkoutForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1428,6 +1595,7 @@ const initCartView = () => {
                 showToast('Thông báo', 'Giỏ hàng đang trống', 'warning');
                 return;
             }
+
             const orderData = {
                 userId: state.user ? state.user.id : 'guest_' + Date.now(),
                 customerName: nameInput ? nameInput.value.trim() : '',
@@ -1436,8 +1604,10 @@ const initCartView = () => {
                 paymentMethod: paymentSelect ? paymentSelect.value : 'cod',
                 items: state.cart
             };
+
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = `<span>Đang xử lý đơn hàng...</span> <i class="ri-loader-4-line ri-spin"></i>`;
+
             try {
                 const res = await fetch(`${API_BASE}/api/orders`, {
                     method: 'POST',
@@ -1448,6 +1618,7 @@ const initCartView = () => {
                     body: JSON.stringify(orderData)
                 });
                 const result = await res.json();
+
                 if (result.success) {
                     state.cart = [];
                     saveCart();
@@ -1455,14 +1626,12 @@ const initCartView = () => {
                     setTimeout(() => {
                         navigate('/orders');
                     }, 1000);
-                }
-                else {
+                } else {
                     showToast('Lỗi đặt hàng', result.message || 'Không thể tạo đơn hàng', 'error');
                     confirmBtn.disabled = false;
                     confirmBtn.innerHTML = `<span>Xác Nhận Đặt Hàng</span> <i class="ri-check-double-line"></i>`;
                 }
-            }
-            catch {
+            } catch {
                 showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = `<span>Xác Nhận Đặt Hàng</span> <i class="ri-check-double-line"></i>`;
@@ -1470,32 +1639,31 @@ const initCartView = () => {
         });
     }
 };
-const renderCartItemsList = () => {
+
+const renderCartItemsList = (): void => {
     const emptyView = document.getElementById('emptyCartView');
     const activeView = document.getElementById('activeCartView');
     const itemsList = document.getElementById('cartItemsList');
     const headerCount = document.getElementById('cartHeaderCount');
     const summarySubtotal = document.getElementById('summarySubtotal');
     const summaryGrandTotal = document.getElementById('summaryGrandTotal');
+
     if (state.cart.length === 0) {
-        if (emptyView)
-            emptyView.style.display = 'block';
-        if (activeView)
-            activeView.style.display = 'none';
+        if (emptyView) emptyView.style.display = 'block';
+        if (activeView) activeView.style.display = 'none';
         return;
     }
-    if (emptyView)
-        emptyView.style.display = 'none';
-    if (activeView)
-        activeView.style.display = 'grid';
+
+    if (emptyView) emptyView.style.display = 'none';
+    if (activeView) activeView.style.display = 'grid';
+
     const totalCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalAmount = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (headerCount)
-        headerCount.textContent = `${totalCount} sản phẩm`;
-    if (summarySubtotal)
-        summarySubtotal.textContent = formatPrice(totalAmount);
-    if (summaryGrandTotal)
-        summaryGrandTotal.textContent = formatPrice(totalAmount);
+
+    if (headerCount) headerCount.textContent = `${totalCount} sản phẩm`;
+    if (summarySubtotal) summarySubtotal.textContent = formatPrice(totalAmount);
+    if (summaryGrandTotal) summaryGrandTotal.textContent = formatPrice(totalAmount);
+
     if (itemsList) {
         itemsList.innerHTML = state.cart.map((item, index) => `
             <div class="cart-item-row">
@@ -1517,23 +1685,21 @@ const renderCartItemsList = () => {
                 </div>
             </div>
         `).join('');
+
         itemsList.querySelectorAll('[data-action]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const action = btn.getAttribute('data-action');
                 const idx = parseInt(btn.getAttribute('data-idx') || '0', 10);
                 if (action === 'minus') {
                     state.cart[idx].quantity--;
-                    if (state.cart[idx].quantity <= 0)
-                        state.cart.splice(idx, 1);
+                    if (state.cart[idx].quantity <= 0) state.cart.splice(idx, 1);
                     saveCart();
                     renderCartItemsList();
-                }
-                else if (action === 'plus') {
+                } else if (action === 'plus') {
                     state.cart[idx].quantity++;
                     saveCart();
                     renderCartItemsList();
-                }
-                else if (action === 'remove') {
+                } else if (action === 'remove') {
                     state.cart.splice(idx, 1);
                     saveCart();
                     renderCartItemsList();
@@ -1543,35 +1709,39 @@ const renderCartItemsList = () => {
         });
     }
 };
-const initOrdersView = async () => {
+
+const initOrdersView = async (): Promise<void> => {
     const loadingEl = document.getElementById('ordersLoading');
     const emptyEl = document.getElementById('ordersEmpty');
     const listEl = document.getElementById('ordersList');
+
     try {
         const endpoint = (state.user && state.user.id)
             ? `${API_BASE}/api/orders/user/${state.user.id}`
             : `${API_BASE}/api/orders`;
+
         const res = await fetch(endpoint, {
             headers: {
                 ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
             }
         });
         const data = await res.json();
-        if (loadingEl)
-            loadingEl.style.display = 'none';
+
+        if (loadingEl) loadingEl.style.display = 'none';
+
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
             state.orders = data.data;
-            if (emptyEl)
-                emptyEl.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'none';
             if (listEl) {
                 listEl.innerHTML = state.orders.map((order) => {
                     const items = Array.isArray(order.items) ? order.items : [];
-                    const statusMap = {
+                    const statusMap: Record<string, { label: string; class: string }> = {
                         completed: { label: 'Hoàn thành', class: 'status-completed' },
                         processing: { label: 'Đang xử lý', class: 'status-processing' },
                         pending: { label: 'Chờ xác nhận', class: 'status-pending' }
                     };
                     const statusInfo = statusMap[order.status] || { label: order.status, class: 'status-pending' };
+
                     return `
                     <div class="order-card">
                         <div class="order-card-top">
@@ -1613,45 +1783,44 @@ const initOrdersView = async () => {
                     `;
                 }).join('');
             }
+        } else {
+            if (emptyEl) emptyEl.style.display = 'block';
         }
-        else {
-            if (emptyEl)
-                emptyEl.style.display = 'block';
-        }
-    }
-    catch {
-        if (loadingEl)
-            loadingEl.style.display = 'none';
-        if (emptyEl)
-            emptyEl.style.display = 'block';
+    } catch {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
     }
 };
-const initLoginView = () => {
+
+const initLoginView = (): void => {
     const loginForm = document.getElementById('customerLoginForm');
-    const emailInput = document.getElementById('loginEmail');
-    const passwordInput = document.getElementById('loginPassword');
-    const submitBtn = document.getElementById('loginSubmitBtn');
+    const emailInput = document.getElementById('loginEmail') as HTMLInputElement | null;
+    const passwordInput = document.getElementById('loginPassword') as HTMLInputElement | null;
+    const submitBtn = document.getElementById('loginSubmitBtn') as HTMLButtonElement | null;
     const togglePassBtn = document.getElementById('togglePasswordBtn');
     const togglePassIcon = document.getElementById('togglePasswordIcon');
+
     if (togglePassBtn && passwordInput && togglePassIcon) {
         togglePassBtn.addEventListener('click', () => {
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 togglePassIcon.className = 'ri-eye-off-line';
-            }
-            else {
+            } else {
                 passwordInput.type = 'password';
                 togglePassIcon.className = 'ri-eye-line';
             }
         });
     }
+
     if (loginForm && emailInput && passwordInput && submitBtn) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = emailInput.value.trim();
             const password = passwordInput.value;
+
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<span>Đang đăng nhập...</span> <i class="ri-loader-4-line ri-spin"></i>`;
+
             try {
                 const res = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
@@ -1659,6 +1828,7 @@ const initLoginView = () => {
                     body: JSON.stringify({ email, password })
                 });
                 const result = await res.json();
+
                 if (result.success) {
                     state.token = result.data.token;
                     state.user = result.data.user;
@@ -1668,14 +1838,12 @@ const initLoginView = () => {
                     setTimeout(() => {
                         navigate('/');
                     }, 800);
-                }
-                else {
+                } else {
                     showToast('Đăng nhập thất bại', result.message || 'Sai thông tin đăng nhập', 'error');
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = `<span>Đăng Nhập Ngay</span> <i class="ri-arrow-right-line"></i>`;
                 }
-            }
-            catch {
+            } catch {
                 showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<span>Đăng Nhập Ngay</span> <i class="ri-arrow-right-line"></i>`;
@@ -1683,28 +1851,30 @@ const initLoginView = () => {
         });
     }
 };
-const initRegisterView = () => {
+
+const initRegisterView = (): void => {
     const regForm = document.getElementById('customerRegisterForm');
-    const submitBtn = document.getElementById('regSubmitBtn');
-    const nameInput = document.getElementById('regName');
-    const emailInput = document.getElementById('regEmail');
-    const passwordInput = document.getElementById('regPassword');
-    const phoneInput = document.getElementById('regPhone');
-    const addressInput = document.getElementById('regAddress');
+    const submitBtn = document.getElementById('regSubmitBtn') as HTMLButtonElement | null;
+    const nameInput = document.getElementById('regName') as HTMLInputElement | null;
+    const emailInput = document.getElementById('regEmail') as HTMLInputElement | null;
+    const passwordInput = document.getElementById('regPassword') as HTMLInputElement | null;
+    const phoneInput = document.getElementById('regPhone') as HTMLInputElement | null;
+    const addressInput = document.getElementById('regAddress') as HTMLTextAreaElement | null;
     const togglePassBtn = document.getElementById('toggleRegPasswordBtn');
     const togglePassIcon = document.getElementById('toggleRegPasswordIcon');
+
     if (togglePassBtn && passwordInput && togglePassIcon) {
         togglePassBtn.addEventListener('click', () => {
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 togglePassIcon.className = 'ri-eye-off-line';
-            }
-            else {
+            } else {
                 passwordInput.type = 'password';
                 togglePassIcon.className = 'ri-eye-line';
             }
         });
     }
+
     if (regForm && submitBtn && nameInput && emailInput && passwordInput && phoneInput && addressInput) {
         regForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1713,8 +1883,10 @@ const initRegisterView = () => {
             const password = passwordInput.value;
             const phone = phoneInput.value.trim();
             const address = addressInput.value.trim();
+
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<span>Đang đăng ký...</span> <i class="ri-loader-4-line ri-spin"></i>`;
+
             try {
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
@@ -1722,6 +1894,7 @@ const initRegisterView = () => {
                     body: JSON.stringify({ name, email, password, phone, address })
                 });
                 const result = await res.json();
+
                 if (result.success) {
                     state.token = result.data.token;
                     state.user = result.data.user;
@@ -1731,14 +1904,12 @@ const initRegisterView = () => {
                     setTimeout(() => {
                         navigate('/');
                     }, 1000);
-                }
-                else {
+                } else {
                     showToast('Đăng ký thất bại', result.message || 'Lỗi đăng ký tài khoản', 'error');
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = `<span>Hoàn Tất Đăng Ký</span> <i class="ri-check-line"></i>`;
                 }
-            }
-            catch {
+            } catch {
                 showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<span>Hoàn Tất Đăng Ký</span> <i class="ri-check-line"></i>`;
@@ -1746,13 +1917,15 @@ const initRegisterView = () => {
         });
     }
 };
-const initChatWidget = () => {
+
+const initChatWidget = (): void => {
     const launcherBtn = document.getElementById('chatLauncherBtn');
     const chatWindow = document.getElementById('chatWidgetWindow');
     const closeBtn = document.getElementById('chatCloseBtn');
     const modeToggleBtn = document.getElementById('chatModeToggleBtn');
     const chatForm = document.getElementById('chatMessageForm');
-    const chatInput = document.getElementById('chatInput');
+    const chatInput = document.getElementById('chatInput') as HTMLInputElement | null;
+
     if (launcherBtn && chatWindow) {
         launcherBtn.addEventListener('click', () => {
             state.chatOpen = !state.chatOpen;
@@ -1760,27 +1933,28 @@ const initChatWidget = () => {
                 chatWindow.classList.add('open');
                 if (!state.chatSessionId) {
                     startChatSession();
-                }
-                else {
+                } else {
                     loadChatMessages();
                 }
-            }
-            else {
+            } else {
                 chatWindow.classList.remove('open');
             }
         });
     }
+
     if (closeBtn && chatWindow) {
         closeBtn.addEventListener('click', () => {
             state.chatOpen = false;
             chatWindow.classList.remove('open');
         });
     }
+
     if (modeToggleBtn) {
         modeToggleBtn.addEventListener('click', () => {
             requestHumanSupport();
         });
     }
+
     if (chatForm && chatInput) {
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1791,6 +1965,7 @@ const initChatWidget = () => {
             }
         });
     }
+
     document.querySelectorAll('.quick-chip-btn').forEach((chip) => {
         chip.addEventListener('click', () => {
             const query = chip.getAttribute('data-query');
@@ -1800,7 +1975,8 @@ const initChatWidget = () => {
         });
     });
 };
-const startChatSession = async () => {
+
+const startChatSession = async (): Promise<void> => {
     try {
         const res = await fetch(`${API_BASE}/api/chat/session`, {
             method: 'POST',
@@ -1818,12 +1994,12 @@ const startChatSession = async () => {
             localStorage.setItem('novashop_chat_session', data.data.id);
             loadChatMessages();
         }
-    }
-    catch { }
+    } catch {}
 };
-const loadChatMessages = async () => {
-    if (!state.chatSessionId)
-        return;
+
+const loadChatMessages = async (): Promise<void> => {
+    if (!state.chatSessionId) return;
+
     try {
         const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}`);
         const data = await res.json();
@@ -1833,33 +2009,31 @@ const loadChatMessages = async () => {
             updateChatHeaderMode();
             renderChatMessages();
         }
-    }
-    catch { }
+    } catch {}
 };
-const updateChatHeaderMode = () => {
+
+const updateChatHeaderMode = (): void => {
     const badge = document.getElementById('chatModeBadge');
     const label = document.getElementById('chatModeToggleLabel');
-    if (!badge || !label)
-        return;
+    if (!badge || !label) return;
+
     if (state.chatSession?.status === 'human_waiting') {
         badge.className = 'chat-human-pill';
         badge.textContent = 'CHỜ CSKH';
         label.textContent = 'Đang đợi';
-    }
-    else if (state.chatSession?.status === 'human_active') {
+    } else if (state.chatSession?.status === 'human_active') {
         badge.className = 'chat-human-pill';
         badge.textContent = 'CSKH TRỰC TIẾP';
         label.textContent = 'Về AI';
-    }
-    else {
+    } else {
         badge.className = 'chat-ai-pill';
         badge.textContent = 'GEMINI AI';
         label.textContent = 'Gặp CSKH';
     }
 };
-const requestHumanSupport = async () => {
-    if (!state.chatSessionId)
-        return;
+
+const requestHumanSupport = async (): Promise<void> => {
+    if (!state.chatSessionId) return;
     try {
         const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}/human-request`, {
             method: 'POST'
@@ -1869,16 +2043,17 @@ const requestHumanSupport = async () => {
             showToast('Hỗ trợ khách hàng', 'Đã chuyển yêu cầu tới nhân viên CSKH', 'success');
             loadChatMessages();
         }
-    }
-    catch { }
+    } catch {}
 };
-const sendChatMessage = async (text) => {
+
+const sendChatMessage = async (text: string): Promise<void> => {
     if (!state.chatSessionId) {
         await startChatSession();
     }
-    if (!state.chatSessionId)
-        return;
+    if (!state.chatSessionId) return;
+
     appendTempUserMessage(text);
+
     try {
         const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}/messages`, {
             method: 'POST',
@@ -1889,15 +2064,15 @@ const sendChatMessage = async (text) => {
         if (data.success) {
             loadChatMessages();
         }
-    }
-    catch {
+    } catch {
         showToast('Lỗi gửi tin', 'Không thể kết nối đến máy chủ live chat', 'error');
     }
 };
-const appendTempUserMessage = (text) => {
+
+const appendTempUserMessage = (text: string): void => {
     const container = document.getElementById('chatMessagesContainer');
-    if (!container)
-        return;
+    if (!container) return;
+
     const el = document.createElement('div');
     el.className = 'chat-msg chat-msg-user';
     el.innerHTML = `
@@ -1908,10 +2083,11 @@ const appendTempUserMessage = (text) => {
     container.appendChild(el);
     container.scrollTop = container.scrollHeight;
 };
-const renderChatMessages = () => {
+
+const renderChatMessages = (): void => {
     const container = document.getElementById('chatMessagesContainer');
-    if (!container)
-        return;
+    if (!container) return;
+
     if (state.chatMessages.length === 0) {
         container.innerHTML = `
             <div class="chat-msg chat-msg-ai">
@@ -1922,10 +2098,12 @@ const renderChatMessages = () => {
         `;
         return;
     }
+
     container.innerHTML = state.chatMessages.map((msg) => {
         const isUser = msg.sender === 'user';
         const senderClass = isUser ? 'chat-msg-user' : 'chat-msg-ai';
         const bubbleClass = isUser ? 'chat-bubble-user' : 'chat-bubble-ai';
+
         const recCards = (msg.productRecommendations && msg.productRecommendations.length > 0)
             ? `
             <div class="chat-recs-grid">
@@ -1941,6 +2119,7 @@ const renderChatMessages = () => {
             </div>
             `
             : '';
+
         return `
             <div class="chat-msg ${senderClass}">
                 <div class="chat-bubble ${bubbleClass}">
@@ -1950,25 +2129,29 @@ const renderChatMessages = () => {
             </div>
         `;
     }).join('');
+
     container.scrollTop = container.scrollHeight;
+
     container.querySelectorAll('.chat-rec-item').forEach((item) => {
         item.addEventListener('click', () => {
             const id = item.getAttribute('data-rec-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
-            if (found)
-                openQuickview(found);
+            if (found) openQuickview(found);
         });
     });
 };
-const escapeHtml = (text) => {
+
+const escapeHtml = (text: string): string => {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 };
+
 window.addEventListener('popstate', () => {
     state.currentRoute = window.location.pathname;
     renderApp();
 });
+
 document.addEventListener('DOMContentLoaded', () => {
     renderApp();
 });

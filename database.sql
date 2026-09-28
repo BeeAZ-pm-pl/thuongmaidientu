@@ -153,6 +153,35 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------------------
+-- 7. BẢNG CHAT_SESSIONS (Chat Service / Live Chat & Gemini AI)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `chat_sessions` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `userId` VARCHAR(64) DEFAULT NULL,
+  `customerName` VARCHAR(255) NOT NULL DEFAULT 'Khách hàng',
+  `customerEmail` VARCHAR(255) DEFAULT '',
+  `status` ENUM('ai', 'human_waiting', 'human_active', 'closed') DEFAULT 'ai',
+  `lastMessage` TEXT,
+  `unreadByAdmin` INT DEFAULT 0,
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------------------
+-- 8. BẢNG CHAT_MESSAGES (Chat Service / Live Chat & Gemini AI)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `chat_messages` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `sessionId` VARCHAR(64) NOT NULL,
+  `sender` ENUM('customer', 'ai', 'staff') NOT NULL,
+  `senderName` VARCHAR(255) NOT NULL,
+  `message` TEXT NOT NULL,
+  `suggestedProducts` JSON DEFAULT NULL,
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sessionId`) REFERENCES `chat_sessions`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ====================================================================
 -- HOÀN TẤT KHỞI TẠO CƠ SỞ DỮ LIỆU
 -- ====================================================================

@@ -18,7 +18,9 @@ app.get('/api/health', async (req, res) => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1500);
-      const pingUrl = name === 'identity' ? `${url}/api/auth/health` : `${url}/health`;
+      const pingUrl = name === 'identity'
+        ? `${url}/api/auth/health`
+        : (name === 'chat' ? `${url}/api/chat/health` : `${url}/health`);
       const response = await fetch(pingUrl, { signal: controller.signal }).catch(() => null);
       clearTimeout(timeoutId);
       serviceStatuses[name] = response && response.ok ? 'ONLINE' : 'UNREACHABLE';
@@ -69,39 +71,78 @@ app.use(
   })
 );
 
+app.use(
+  createProxyMiddleware({
+    target: config.services.chat,
+    changeOrigin: true,
+    pathFilter: '/api/chat'
+  })
+);
+
 app.use('/admin/css', express.static(path.join(__dirname, '../../admin/css')));
 app.use('/admin/js', express.static(path.join(__dirname, '../../admin/js')));
 
-app.get('/admin/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../admin/login.html'));
-});
+const getAdminShell = () => `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | NovaShop Quản Trị</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/variables.css">
+  <link rel="stylesheet" href="/admin/css/base.css">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link rel="stylesheet" href="/admin/css/modals.css">
+  <link rel="stylesheet" href="/admin/css/admin-login.css">
+</head>
+<body>
+  <div id="admin-app"></div>
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/admin/js/admin.js"></script>
+</body>
+</html>`;
 
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../admin/index.html'));
-});
+const getClientShell = () => `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaShop | Mua Sắm Trực Tuyến Chính Hãng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/navbar.css">
+  <link rel="stylesheet" href="/css/storefront.css">
+  <link rel="stylesheet" href="/css/modals.css">
+  <link rel="stylesheet" href="/css/cart.css">
+  <link rel="stylesheet" href="/css/orders.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/js/app.js"></script>
+</body>
+</html>`;
 
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/login.html'));
-});
-
-app.get('/register', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/register.html'));
-});
-
-app.get('/cart', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/cart.html'));
-});
-
-app.get('/orders', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/orders.html'));
+app.get(['/admin', '/admin/*'], (req, res) => {
+  res.type('html').send(getAdminShell());
 });
 
 app.use(express.static(path.join(__dirname, '../../client')));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/index.html'));
+  res.type('html').send(getClientShell());
 });
 
 app.listen(config.port, () => {
   console.log(`API Gateway is running on port ${config.port}`);
 });
+
+module.exports = app;
