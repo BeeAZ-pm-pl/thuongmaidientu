@@ -60,28 +60,8 @@ app.use(
 app.use('/admin/css', express.static(path.join(__dirname, '../../admin/css')));
 app.use('/admin/js', express.static(path.join(__dirname, '../../admin/js')));
 
-app.get('/admin/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../admin/login.html'));
-});
-
-app.get('/admin', (req, res) => {
+app.get(['/admin', '/admin/*'], (req, res) => {
   res.sendFile(path.join(__dirname, '../../admin/index.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/login.html'));
-});
-
-app.get('/register', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/register.html'));
-});
-
-app.get('/cart', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/cart.html'));
-});
-
-app.get('/orders', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/orders.html'));
 });
 
 app.use(express.static(path.join(__dirname, '../../client')));

@@ -45,23 +45,8 @@ app.use((0, http_proxy_middleware_1.createProxyMiddleware)({
 }));
 app.use('/admin/css', express_1.default.static(path_1.default.join(__dirname, '../../admin/css')));
 app.use('/admin/js', express_1.default.static(path_1.default.join(__dirname, '../../admin/js')));
-app.get('/admin/login', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../admin/login.html'));
-});
-app.get('/admin', (req, res) => {
+app.get(['/admin', '/admin/*'], (req, res) => {
     res.sendFile(path_1.default.join(__dirname, '../../admin/index.html'));
-});
-app.get('/login', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../client/login.html'));
-});
-app.get('/register', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../client/register.html'));
-});
-app.get('/cart', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../client/cart.html'));
-});
-app.get('/orders', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../client/orders.html'));
 });
 app.use(express_1.default.static(path_1.default.join(__dirname, '../../client')));
 app.get('*', (req, res) => {
