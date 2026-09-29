@@ -93,12 +93,61 @@ const deductStock = async (req, res) => {
   }
 };
 
+const updateProductVariants = async (req, res) => {
+  try {
+    const { variants } = req.body;
+    if (!variants || !Array.isArray(variants)) {
+      return res.status(400).json({ success: false, message: 'Danh sách biến thể không hợp lệ' });
+    }
+    const updated = await productModel.updateVariants(req.params.id, variants);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
+    }
+    return res.json({ success: true, message: 'Cập nhật biến thể thành công', data: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi khi cập nhật biến thể', error: error.message });
+  }
+};
+
+const getProductReviews = async (req, res) => {
+  try {
+    const data = await productModel.getReviewsByProductId(req.params.id);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi khi lấy đánh giá sản phẩm', error: error.message });
+  }
+};
+
+const addProductReview = async (req, res) => {
+  try {
+    const { rating, comment, userName, userAvatar, userId, isBuyer } = req.body;
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung đánh giá' });
+    }
+    const review = await productModel.addReview({
+      productId: req.params.id,
+      rating: parseInt(rating, 10) || 5,
+      comment,
+      userName,
+      userAvatar,
+      userId,
+      isBuyer: isBuyer !== false
+    });
+    return res.status(201).json({ success: true, message: 'Gửi đánh giá thành công', data: review });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi khi gửi đánh giá', error: error.message });
+  }
+};
+
 module.exports = {
   getCategories,
   getAllProducts,
   getProductById,
   createProduct,
   updateProduct,
+  updateProductVariants,
   deleteProduct,
-  deductStock
+  deductStock,
+  getProductReviews,
+  addProductReview
 };

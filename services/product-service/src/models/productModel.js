@@ -437,6 +437,23 @@ const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_reviews (
+      id VARCHAR(64) PRIMARY KEY,
+      productId VARCHAR(64) NOT NULL,
+      userId VARCHAR(64),
+      userName VARCHAR(255) NOT NULL,
+      userAvatar TEXT,
+      rating INT NOT NULL DEFAULT 5,
+      comment TEXT NOT NULL,
+      isBuyer BOOLEAN DEFAULT 1,
+      helpfulCount INT DEFAULT 0,
+      replyComment TEXT,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   const [catRows] = await pool.query('SELECT COUNT(*) as count FROM categories');
   if (catRows[0].count === 0) {
     for (const cat of initialCategories) {
@@ -590,14 +607,51 @@ const create = async (productData) => {
     [id, productData.name, productData.categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount]
   );
 
-  const defaultVariantId = `var_${Date.now()}_1`;
-  await db.query(
-    `INSERT INTO product_variants (id, productId, color, type, price, originalPrice, stock, imageUrl)
-     VALUES (?, ?, 'Tiêu chuẩn', 'Tiêu chuẩn', ?, ?, ?, ?)`,
-    [defaultVariantId, id, price, originalPrice, stock, imageUrl]
-  );
+  if (productData.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
+    for (const v of productData.variants) {
+      const varId = v.id || `var_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+      await db.query(
+        `INSERT INTO product_variants (id, productId, color, type, price, originalPrice, stock, imageUrl)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [varId, id, v.color || 'Tiêu chuẩn', v.type || 'Tiêu chuẩn', Number(v.price) || price, Number(v.originalPrice) || originalPrice || price, Number(v.stock) || stock, v.imageUrl || imageUrl]
+      );
+    }
+  } else {
+    const defaultVariantId = `var_${Date.now()}_1`;
+    await db.query(
+      `INSERT INTO product_variants (id, productId, color, type, price, originalPrice, stock, imageUrl)
+       VALUES (?, ?, 'Tiêu chuẩn', 'Tiêu chuẩn', ?, ?, ?, ?)`,
+      [defaultVariantId, id, price, originalPrice, stock, imageUrl]
+    );
+  }
 
   return findById(id);
+};
+
+const updateVariants = async (productId, variants) => {
+  const db = await initDb();
+  const current = await findById(productId);
+  if (!current) return null;
+
+  if (Array.isArray(variants)) {
+    await db.query('DELETE FROM product_variants WHERE productId = ?', [productId]);
+    for (const v of variants) {
+      const varId = v.id && !String(v.id).startsWith('temp_') ? v.id : `var_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+      const color = v.color || 'Tiêu chuẩn';
+      const type = v.type || 'Tiêu chuẩn';
+      const vPrice = Number(v.price) || current.price;
+      const vOrigPrice = Number(v.originalPrice) || current.originalPrice || vPrice;
+      const vStock = Number(v.stock) || 0;
+      const vImg = v.imageUrl || current.imageUrl;
+      await db.query(
+        `INSERT INTO product_variants (id, productId, color, type, price, originalPrice, stock, imageUrl)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [varId, productId, color, type, vPrice, vOrigPrice, vStock, vImg]
+      );
+    }
+  }
+
+  return findById(productId);
 };
 
 const update = async (id, updateData) => {
@@ -629,6 +683,10 @@ const update = async (id, updateData) => {
      WHERE id = ?`,
     [name, categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, id]
   );
+
+  if (updateData.variants && Array.isArray(updateData.variants)) {
+    await updateVariants(id, updateData.variants);
+  }
 
   return findById(id);
 };
@@ -688,14 +746,74 @@ const deductStock = async (items) => {
   }
 };
 
+const getReviewsByProductId = async (productId) => {
+  const db = await initDb();
+  const [rows] = await db.query(
+    'SELECT * FROM product_reviews WHERE productId = ? ORDER BY createdAt DESC',
+    [productId]
+  );
+
+  const totalCount = rows.length;
+  const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sumRating = 0;
+
+  for (const r of rows) {
+    const star = Math.max(1, Math.min(5, Math.round(r.rating || 5)));
+    breakdown[star] = (breakdown[star] || 0) + 1;
+    sumRating += Number(r.rating) || 5;
+  }
+
+  const averageRating = totalCount > 0 ? parseFloat((sumRating / totalCount).toFixed(1)) : 5.0;
+
+  return {
+    reviews: rows,
+    stats: {
+      totalCount,
+      averageRating,
+      breakdown
+    }
+  };
+};
+
+const addReview = async ({ productId, userId, userName, userAvatar, rating, comment, isBuyer }) => {
+  const db = await initDb();
+  const id = `rev_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  const cleanRating = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
+  const cleanUserName = (userName || 'Khách hàng').trim();
+  const cleanComment = (comment || '').trim();
+  const buyerFlag = isBuyer === false || isBuyer === 0 ? 0 : 1;
+
+  await db.query(
+    `INSERT INTO product_reviews (id, productId, userId, userName, userAvatar, rating, comment, isBuyer, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    [id, productId, userId || null, cleanUserName, userAvatar || null, cleanRating, cleanComment, buyerFlag]
+  );
+
+  // Recalculate average rating for the product
+  const [statRows] = await db.query(
+    'SELECT AVG(rating) as avgRating, COUNT(*) as count FROM product_reviews WHERE productId = ?',
+    [productId]
+  );
+  if (statRows.length > 0 && statRows[0].count > 0) {
+    const newRating = parseFloat(Number(statRows[0].avgRating).toFixed(1));
+    await db.query('UPDATE products SET rating = ? WHERE id = ?', [newRating, productId]);
+  }
+
+  const [created] = await db.query('SELECT * FROM product_reviews WHERE id = ?', [id]);
+  return created[0];
+};
+
 module.exports = {
   initDb,
   getCategories,
   getVariantsByProductId,
+  getReviewsByProductId,
+  addReview,
   findAll,
   findById,
   create,
   update,
+  updateVariants,
   remove,
   deductStock
 };

@@ -22,13 +22,18 @@ const state = {
     flashSaleFilter: false,
     orders: [],
     ordersLoading: false,
-    chatSessionId: localStorage.getItem('novashop_chat_session') || '',
+    chatSessionId: (() => {
+        const s = localStorage.getItem('novashop_chat_session');
+        return s && s !== 'undefined' && s !== 'null' ? s : '';
+    })(),
     chatSession: null,
     chatMessages: [],
     chatOpen: false,
     chatLoading: false,
     chatPollingTimer: null,
-    flashCountdownTimer: null
+    flashCountdownTimer: null,
+    appliedVoucher: null,
+    availableVouchers: []
 };
 const formatPrice = (amount) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -92,21 +97,22 @@ const renderHeaderTemplate = () => {
     const cartCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
     const userTopHtml = state.user
         ? `
-        <div class="top-user-group">
-            <span class="top-user-name">
-                <i class="ri-user-smile-fill" style="color: #ee4d2d; font-size: 1rem;"></i>
+        <div class="top-user-menu">
+            <button type="button" class="user-profile-trigger" id="topUserMenuBtn" title="Tài khoản của bạn">
+                <i class="ri-user-smile-fill" style="color: #ee4d2d; font-size: 1.05rem;"></i>
                 <span>${state.user.name}</span>
-            </span>
-            <span class="top-bar-divider"></span>
-            <a href="/orders" class="top-bar-link" data-nav-link>
-                <i class="ri-file-list-3-line"></i>
-                <span>Đơn Mua</span>
-            </a>
-            <span class="top-bar-divider"></span>
-            <button id="logoutBtn" type="button" class="top-bar-link" style="background: none; border: none; cursor: pointer; padding: 0;">
-                <i class="ri-logout-box-r-line"></i>
-                <span>Đăng Xuất</span>
+                <i class="ri-arrow-down-s-line" style="font-size: 0.75rem;"></i>
             </button>
+            <div id="topUserDropdownMenu" class="user-dropdown-menu">
+                <a href="/orders" class="user-dropdown-item" data-nav-link>
+                    <i class="ri-file-list-3-line"></i>
+                    <span>Đơn Mua Của Tôi</span>
+                </a>
+                <button id="logoutBtn" type="button" class="user-dropdown-item" style="color: #ef4444;">
+                    <i class="ri-logout-box-r-line"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </div>
         </div>
         `
         : `
@@ -121,31 +127,104 @@ const renderHeaderTemplate = () => {
         <div class="site-top-bar">
             <div class="container top-bar-container">
                 <div class="top-bar-left">
-                    <span class="top-bar-link">
+                    <span class="top-bar-link" style="cursor: default;">
                         <i class="ri-shield-check-fill" style="color: #ee4d2d;"></i>
-                        <span>NovaShop Chính Hãng 100%</span>
+                        <span>Sàn TMĐT NovaShop - 100% Chính Hãng</span>
                     </span>
                     <span class="top-bar-divider"></span>
-                    <span class="top-bar-link">
-                        <i class="ri-smartphone-line"></i>
-                        <span>Tải ứng dụng</span>
+                    <span class="top-bar-link" style="cursor: default;">
+                        <i class="ri-phone-fill" style="color: #0284c7;"></i>
+                        <span>Hotline: 1900 8888</span>
                     </span>
                     <span class="top-bar-divider"></span>
-                    <span class="top-bar-link">
+                    <div class="top-bar-item-dropdown">
+                        <button id="topDownloadAppBtn" type="button" class="top-bar-btn" title="Tải ứng dụng di động NovaShop">
+                            <i class="ri-smartphone-line"></i>
+                            <span>Tải ứng dụng</span>
+                        </button>
+                        <div id="topAppQrMenu" class="top-dropdown-menu app-qr-dropdown">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://novashop.vn/app" alt="QR Tải Ứng Dụng NovaShop" class="app-qr-image">
+                            <div class="app-qr-title">Quét mã để tải ứng dụng NovaShop</div>
+                            <div class="app-qr-badges">
+                                <a href="javascript:void(0)" class="app-store-badge" id="appStoreBtn"><i class="ri-apple-fill"></i> App Store</a>
+                                <a href="javascript:void(0)" class="app-store-badge" id="googlePlayBtn"><i class="ri-google-play-fill"></i> Google Play</a>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="top-bar-divider"></span>
+                    <span class="top-bar-link" style="cursor: default;">
                         <span>Kết nối</span>
-                        <i class="ri-facebook-circle-fill" style="font-size: 1rem;"></i>
-                        <i class="ri-instagram-fill" style="font-size: 1rem;"></i>
+                        <span class="top-bar-social-links">
+                            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="top-bar-social" title="Facebook NovaShop"><i class="ri-facebook-circle-fill"></i></a>
+                            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="top-bar-social" title="Instagram NovaShop"><i class="ri-instagram-fill"></i></a>
+                            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="top-bar-social" title="TikTok NovaShop"><i class="ri-tiktok-fill"></i></a>
+                        </span>
                     </span>
                 </div>
                 <div class="top-bar-right">
-                    <span class="top-bar-link">
-                        <i class="ri-notification-3-line"></i>
-                        <span>Thông Báo</span>
-                    </span>
-                    <a href="/help" class="top-bar-link" data-nav-link>
+                    <div class="top-bar-item-dropdown" id="topNotificationWrapper">
+                        <button id="topNotificationBtn" type="button" class="top-bar-btn" title="Xem thông báo mới nhất">
+                            <i class="ri-notification-3-line"></i>
+                            <span>Thông Báo</span>
+                            <span id="topNotifBadge" class="top-badge">3</span>
+                        </button>
+                        <div id="topNotificationMenu" class="top-dropdown-menu notification-dropdown">
+                            <div class="notif-header">
+                                <span class="notif-header-title">Thông báo mới nhận</span>
+                                <button id="markAllReadBtn" type="button" class="notif-mark-read-btn">Đánh dấu đã đọc</button>
+                            </div>
+                            <div class="notif-list">
+                                <a href="/orders" class="notif-item unread" data-nav-link>
+                                    <div class="notif-icon-circle order"><i class="ri-truck-line"></i></div>
+                                    <div class="notif-info">
+                                        <div class="notif-title">Đơn hàng #ord_1001 đã hoàn tất</div>
+                                        <div class="notif-desc">Giao hàng thành công. Hãy đánh giá sản phẩm để nhận ngay 200 Xu Nova!</div>
+                                        <div class="notif-time">2 giờ trước</div>
+                                    </div>
+                                </a>
+                                <a href="/#flashSaleSection" class="notif-item unread" data-nav-link>
+                                    <div class="notif-icon-circle sale"><i class="ri-flashlight-line"></i></div>
+                                    <div class="notif-info">
+                                        <div class="notif-title">Siêu Flash Sale Khung Giờ Vàng</div>
+                                        <div class="notif-desc">Hàng loạt phụ kiện công nghệ giảm tới 50% trong hôm nay. Đừng bỏ lỡ!</div>
+                                        <div class="notif-time">5 giờ trước</div>
+                                    </div>
+                                </a>
+                                <a href="/#productsSection" class="notif-item unread" data-nav-link>
+                                    <div class="notif-icon-circle voucher"><i class="ri-ticket-2-line"></i></div>
+                                    <div class="notif-info">
+                                        <div class="notif-title">Voucher 50K tặng bạn mới</div>
+                                        <div class="notif-desc">Mã NOVASHOP50 giảm 50.000đ cho đơn từ 200K đã sẵn sàng trong ví của bạn.</div>
+                                        <div class="notif-time">1 ngày trước</div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="notif-footer">
+                                <a href="/orders" data-nav-link>Xem tất cả thông báo</a>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="/help" class="top-bar-link" data-nav-link title="Trung tâm hỗ trợ khách hàng">
                         <i class="ri-question-line"></i>
                         <span>Hỗ Trợ</span>
                     </a>
+                    <span class="top-bar-divider"></span>
+                    <div class="top-bar-item-dropdown">
+                        <button id="langSwitcherBtn" type="button" class="top-bar-btn" title="Chọn ngôn ngữ hiển thị">
+                            <i class="ri-global-line"></i>
+                            <span id="currentLangLabel">Tiếng Việt</span>
+                            <i class="ri-arrow-down-s-line" style="font-size: 0.75rem;"></i>
+                        </button>
+                        <div id="langDropdownMenu" class="top-dropdown-menu lang-dropdown">
+                            <div class="lang-item active" data-lang="vi">
+                                <span>Tiếng Việt</span>
+                                <i class="ri-check-line"></i>
+                            </div>
+                            <div class="lang-item" data-lang="en">
+                                <span>English</span>
+                            </div>
+                        </div>
+                    </div>
                     <span class="top-bar-divider"></span>
                     <div id="userMenuWrapper">
                         ${userTopHtml}
@@ -160,6 +239,7 @@ const renderHeaderTemplate = () => {
                     <i class="ri-shopping-bag-3-fill"></i>
                 </div>
                 <span>NovaShop</span>
+                <span class="brand-badge">Mall Chính Hãng</span>
             </a>
 
             <div class="search-container-group">
@@ -181,7 +261,11 @@ const renderHeaderTemplate = () => {
             </div>
 
             <div class="nav-actions">
-                <a href="/cart" class="cart-btn-trigger" aria-label="Giỏ hàng" data-nav-link>
+                <a href="/orders" class="top-bar-link" style="font-weight: 600; font-size: 0.875rem; color: var(--text-main);" data-nav-link title="Tra cứu trạng thái đơn hàng">
+                    <i class="ri-truck-line" style="font-size: 1.25rem; color: #ee4d2d;"></i>
+                    <span>Đơn Mua</span>
+                </a>
+                <a href="/cart" class="cart-btn-trigger" aria-label="Giỏ hàng" data-nav-link title="Xem giỏ hàng của bạn">
                     <i class="ri-shopping-cart-2-line"></i>
                     <span id="cartCountBadge" class="cart-count">${cartCount}</span>
                 </a>
@@ -737,7 +821,7 @@ const renderShippingView = () => {
 };
 const renderChatWidgetTemplate = () => {
     return `
-    <button id="chatLauncherBtn" class="chat-launcher-btn" aria-label="Mở live chat hỗ trợ khách hàng" type="button">
+    <button id="chatLauncherBtn" class="chat-launcher-btn" aria-label="Mở khung hỗ trợ khách hàng" type="button" title="Chat hỗ trợ khách hàng">
         <i class="ri-customer-service-2-fill"></i>
         <span class="chat-launcher-badge"></span>
     </button>
@@ -746,22 +830,18 @@ const renderChatWidgetTemplate = () => {
         <div class="chat-header">
             <div class="chat-header-info">
                 <div class="chat-avatar-box">
-                    <i class="ri-robot-2-line"></i>
+                    <i class="ri-customer-service-2-line"></i>
                     <span class="chat-avatar-status"></span>
                 </div>
                 <div>
                     <div class="chat-header-title">
-                        <span id="chatTitleText">NovaBot AI</span>
-                        <span id="chatModeBadge" class="chat-ai-pill">GEMINI AI</span>
+                        <span id="chatTitleText">Hỗ Trợ Khách Hàng</span>
+                        <span class="chat-status-pill">Trực Tuyến</span>
                     </div>
-                    <div id="chatSubtitleText" class="chat-header-subtitle">Trợ lý mua sắm trực tuyến 24/7</div>
+                    <div id="chatSubtitleText" class="chat-header-subtitle">NovaShop sẵn sàng hỗ trợ bạn 24/7</div>
                 </div>
             </div>
             <div class="chat-header-actions">
-                <button id="chatModeToggleBtn" class="chat-mode-toggle-btn" title="Chuyển chế độ chat" type="button">
-                    <i class="ri-user-voice-line"></i>
-                    <span id="chatModeToggleLabel">Gặp CSKH</span>
-                </button>
                 <button id="chatCloseBtn" class="chat-close-btn" title="Đóng khung chat" type="button">
                     <i class="ri-close-line"></i>
                 </button>
@@ -769,25 +849,25 @@ const renderChatWidgetTemplate = () => {
         </div>
 
         <div class="chat-quick-suggestions">
-            <button class="quick-chip-btn" data-query="Tư vấn tai nghe Bluetooth chống ồn" type="button">🎧 Tai nghe chống ồn</button>
+            <button class="quick-chip-btn" data-query="Tư vấn tai nghe Bluetooth" type="button">🎧 Tư vấn tai nghe</button>
             <button class="quick-chip-btn" data-query="Gợi ý bàn phím cơ gõ êm" type="button">⌨️ Bàn phím cơ</button>
-            <button class="quick-chip-btn" data-query="Các sản phẩm đang Flash Sale hôm nay?" type="button">🔥 Flash Sale</button>
-            <button class="quick-chip-btn" data-query="Chính sách bảo hành và đổi trả như thế nào?" type="button">🛡️ Bảo hành 7 ngày</button>
-            <button class="quick-chip-btn" data-query="Giao hàng bao lâu thì nhận được?" type="button">🚀 Thời gian giao hàng</button>
+            <button class="quick-chip-btn" data-query="Các sản phẩm đang giảm giá Flash Sale?" type="button">🔥 Khuyến mãi hôm nay</button>
+            <button class="quick-chip-btn" data-query="Chính sách bảo hành và đổi trả thế nào?" type="button">🛡️ Chính sách đổi trả</button>
+            <button class="quick-chip-btn" data-query="Thời gian giao hàng là bao lâu?" type="button">🚀 Thời gian giao hàng</button>
         </div>
 
         <div id="chatMessagesContainer" class="chat-messages-container"></div>
 
         <div class="chat-footer">
             <form id="chatMessageForm" class="chat-input-row">
-                <input type="text" id="chatInput" class="chat-input" placeholder="Nhập câu hỏi hoặc cần tư vấn sản phẩm..." autocomplete="off">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Nhập câu hỏi hoặc sản phẩm bạn cần tìm..." autocomplete="off">
                 <button type="submit" id="chatSendBtn" class="chat-send-btn" aria-label="Gửi tin nhắn">
                     <i class="ri-send-plane-fill"></i>
                 </button>
             </form>
             <div class="chat-footer-caption">
-                <i class="ri-sparkling-fill" style="color: #38bdf8;"></i>
-                <span>Được hỗ trợ bởi Google Gemini AI • NovaShop 2026</span>
+                <i class="ri-phone-line" style="color: #ee4d2d;"></i>
+                <span>Tổng đài CSKH: 1900 8888 • Hỗ trợ 24/7</span>
             </div>
         </div>
     </div>
@@ -798,40 +878,40 @@ const renderStorefrontView = () => {
     ${renderHeaderTemplate()}
 
     <main>
-        <section class="shopee-banner-section">
+        <section class="novamall-banner-section">
             <div class="container">
-                <div class="shopee-banner-grid">
-                    <div class="shopee-main-slider">
-                        <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&q=80" alt="Banner Siêu Sale" class="shopee-slider-bg">
-                        <div class="shopee-slider-content">
-                            <div class="shopee-slider-tag">
+                <div class="novamall-banner-grid">
+                    <div class="novamall-main-slider">
+                        <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&q=80" alt="Banner Siêu Sale" class="novamall-slider-bg">
+                        <div class="novamall-slider-content">
+                            <div class="novamall-slider-tag">
                                 <i class="ri-flashlight-fill" style="color: #ffd839;"></i> SIÊU SALE CÔNG NGHỆ 2026
                             </div>
-                            <h2 class="shopee-slider-title">Giảm Đến 50%<br>Hàng Hiệu NovaMall</h2>
-                            <p class="shopee-slider-desc">Voucher giảm thêm 100K • Miễn phí vận chuyển toàn quốc 0Đ</p>
+                            <h2 class="novamall-slider-title">Giảm Đến 50%<br>Hàng Hiệu NovaMall</h2>
+                            <p class="novamall-slider-desc">Voucher giảm thêm 100K • Miễn phí vận chuyển toàn quốc 0Đ</p>
                             <a href="#flashSaleSection" class="btn btn-primary btn-sm">
                                 <span>Săn Deal Chớp Nhoáng</span>
                                 <i class="ri-arrow-right-line"></i>
                             </a>
                         </div>
                     </div>
-                    <div class="shopee-sub-banners">
-                        <a href="#productsSection" class="shopee-sub-banner-item shopee-sub-banner-1">
+                    <div class="novamall-sub-banners">
+                        <a href="#productsSection" class="novamall-sub-banner-item novamall-sub-banner-1">
                             <div>
-                                <div class="shopee-sub-banner-title">👑 NovaMall Chính Hãng</div>
-                                <div class="shopee-sub-banner-desc">100% chính hãng • Đổi trả miễn phí 7 ngày</div>
+                                <div class="novamall-sub-banner-title">👑 NovaMall Chính Hãng</div>
+                                <div class="novamall-sub-banner-desc">100% chính hãng • Đổi trả miễn phí 7 ngày</div>
                             </div>
                         </a>
-                        <a href="#flashSaleSection" class="shopee-sub-banner-item shopee-sub-banner-2">
+                        <a href="#flashSaleSection" class="novamall-sub-banner-item novamall-sub-banner-2">
                             <div>
-                                <div class="shopee-sub-banner-title">⚡ Flash Sale Mỗi Ngày</div>
-                                <div class="shopee-sub-banner-desc">Khung giờ vàng giá sốc từ 99K</div>
+                                <div class="novamall-sub-banner-title">⚡ Flash Sale Mỗi Ngày</div>
+                                <div class="novamall-sub-banner-desc">Khung giờ vàng giá sốc từ 99K</div>
                             </div>
                         </a>
                     </div>
                 </div>
 
-                <div class="shopee-quick-services">
+                <div class="novamall-quick-services">
                     <a href="#flashSaleSection" class="quick-service-item">
                         <div class="quick-service-icon-box" style="background: #fee2e2; color: #ef4444;">
                             <i class="ri-flashlight-fill"></i>
@@ -1000,11 +1080,11 @@ const renderStorefrontView = () => {
     ${renderFooterTemplate()}
 
     <div id="quickviewModal" class="modal-overlay">
-        <div class="modal-card modal-card-shopee">
+        <div class="modal-card modal-card-novamall">
             <button class="modal-close-btn" data-close-modal="quickviewModal" type="button">
                 <i class="ri-close-line"></i>
             </button>
-            <div class="modal-body modal-body-shopee">
+            <div class="modal-body modal-body-novamall">
                 <div id="quickviewContent"></div>
             </div>
         </div>
@@ -1084,10 +1164,35 @@ const renderCartView = () => {
                         </select>
                     </div>
 
+                    <div class="cart-voucher-section">
+                        <div class="cart-voucher-header">
+                            <div class="cart-voucher-title">
+                                <i class="ri-coupon-3-fill" style="color: var(--primary);"></i>
+                                <span>Mã Giảm Giá / Voucher</span>
+                            </div>
+                            <button type="button" id="toggleVouchersBtn" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 2px 8px; border-color: #cbd5e1;">
+                                Danh sách voucher <i class="ri-arrow-down-s-line"></i>
+                            </button>
+                        </div>
+
+                        <div class="cart-voucher-input-group">
+                            <input type="text" id="voucherCodeInput" class="form-input form-input-sm cart-voucher-input" placeholder="Nhập mã ưu đãi (vd: NOVASHOP50)">
+                            <button type="button" id="applyVoucherBtn" class="btn btn-secondary btn-sm" style="font-weight: 700;">Áp dụng</button>
+                        </div>
+
+                        <div id="appliedVoucherContainer"></div>
+
+                        <div id="voucherSuggestions" class="voucher-suggestions" style="display: none;"></div>
+                    </div>
+
                     <div class="cart-price-breakdown">
                         <div class="cart-breakdown-row">
                             <span>Tạm tính:</span>
                             <span id="summarySubtotal">0 đ</span>
+                        </div>
+                        <div class="cart-breakdown-row" id="voucherDiscountRow" style="display: none;">
+                            <span>Giảm giá Voucher (<strong id="summaryVoucherCode" style="color: #059669;"></strong>):</span>
+                            <span id="summaryVoucherDiscount" style="color: #059669; font-weight: 700;">-0 đ</span>
                         </div>
                         <div class="cart-breakdown-row">
                             <span>Phí vận chuyển:</span>
@@ -1477,6 +1582,97 @@ const bindGlobalNavigation = () => {
             navigate('/');
         });
     }
+    const closeAllTopDropdowns = () => {
+        const dropdowns = document.querySelectorAll('.top-dropdown-menu, .user-dropdown-menu');
+        dropdowns.forEach((dd) => {
+            dd.classList.remove('show');
+        });
+    };
+    const notifBtn = document.getElementById('topNotificationBtn');
+    const notifMenu = document.getElementById('topNotificationMenu');
+    if (notifBtn && notifMenu) {
+        notifBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = notifMenu.classList.contains('show');
+            closeAllTopDropdowns();
+            if (!isOpen)
+                notifMenu.classList.add('show');
+        });
+    }
+    const markAllReadBtn = document.getElementById('markAllReadBtn');
+    if (markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.notif-item.unread').forEach((item) => {
+                item.classList.remove('unread');
+            });
+            const badge = document.getElementById('topNotifBadge');
+            if (badge)
+                badge.style.display = 'none';
+            showToast('Thông báo', 'Đã đánh dấu tất cả thông báo là đã đọc', 'success');
+        });
+    }
+    const appBtn = document.getElementById('topDownloadAppBtn');
+    const appMenu = document.getElementById('topAppQrMenu');
+    if (appBtn && appMenu) {
+        appBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = appMenu.classList.contains('show');
+            closeAllTopDropdowns();
+            if (!isOpen)
+                appMenu.classList.add('show');
+        });
+    }
+    const appStoreBtn = document.getElementById('appStoreBtn');
+    const googlePlayBtn = document.getElementById('googlePlayBtn');
+    [appStoreBtn, googlePlayBtn].forEach((btn) => {
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showToast('Tải Ứng Dụng', 'Ứng dụng NovaShop trên iOS và Android sẽ sớm phát hành chính thức!', 'warning');
+            });
+        }
+    });
+    const langBtn = document.getElementById('langSwitcherBtn');
+    const langMenu = document.getElementById('langDropdownMenu');
+    if (langBtn && langMenu) {
+        langBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = langMenu.classList.contains('show');
+            closeAllTopDropdowns();
+            if (!isOpen)
+                langMenu.classList.add('show');
+        });
+    }
+    document.querySelectorAll('.lang-item').forEach((item) => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.lang-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const lang = item.getAttribute('data-lang');
+            const label = document.getElementById('currentLangLabel');
+            if (label) {
+                label.textContent = lang === 'en' ? 'English' : 'Tiếng Việt';
+            }
+            if (langMenu)
+                langMenu.classList.remove('show');
+            showToast('Ngôn ngữ', `Đã chuyển sang ${lang === 'en' ? 'English' : 'Tiếng Việt'}`, 'success');
+        });
+    });
+    const userMenuBtn = document.getElementById('topUserMenuBtn');
+    const userMenuDropdown = document.getElementById('topUserDropdownMenu');
+    if (userMenuBtn && userMenuDropdown) {
+        userMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = userMenuDropdown.classList.contains('show');
+            closeAllTopDropdowns();
+            if (!isOpen)
+                userMenuDropdown.classList.add('show');
+        });
+    }
+    document.addEventListener('click', () => {
+        closeAllTopDropdowns();
+    });
 };
 const initStorefrontView = () => {
     fetchCategories();
@@ -1576,7 +1772,7 @@ const initSearchSuggestions = () => {
                 const found = state.products.find(p => p.id.toString() === prodId?.toString());
                 dropdown.classList.remove('active');
                 if (found) {
-                    openShopeeDetail(found);
+                    openProductDetail(found);
                 }
                 else {
                     input.value = prodName;
@@ -1761,7 +1957,7 @@ const bindStorefrontControls = () => {
             e.preventDefault();
             const msg = btn.getAttribute('data-service-toast');
             if (msg)
-                showToast('Ưu Đãi Shopee', msg, 'success');
+                showToast('Ưu Đãi NovaShop', msg, 'success');
         });
     });
     document.querySelectorAll('[data-quick-category]').forEach((btn) => {
@@ -1974,7 +2170,7 @@ const renderProductsGrid = () => {
             const id = card.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openShopeeDetail(found);
+                openProductDetail(found);
         });
     });
     gridEl.querySelectorAll('.quickview-trigger').forEach((btn) => {
@@ -1983,7 +2179,7 @@ const renderProductsGrid = () => {
             const id = btn.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openShopeeDetail(found);
+                openProductDetail(found);
         });
     });
     gridEl.querySelectorAll('.add-to-cart-direct-btn').forEach((btn) => {
@@ -2059,7 +2255,7 @@ const renderFlashSaleGrid = () => {
             const id = card.getAttribute('data-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openShopeeDetail(found);
+                openProductDetail(found);
         });
     });
     gridEl.querySelectorAll('.flash-add-cart-btn').forEach((btn) => {
@@ -2103,7 +2299,265 @@ const initFlashSaleCountdown = () => {
             secEl.textContent = s.toString().padStart(2, '0');
     }, 1000);
 };
-function openShopeeDetail(product) {
+const loadAndRenderProductReviews = async (productId) => {
+    const container = document.getElementById('productReviewsContainer');
+    if (!container)
+        return;
+    try {
+        const res = await fetch(`${API_BASE}/api/products/${productId}/reviews`);
+        const result = await res.json();
+        if (!result.success || !result.data) {
+            container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Chưa có đánh giá nào cho sản phẩm này.</div>`;
+            return;
+        }
+        const reviews = result.data.reviews || [];
+        const stats = result.data.stats || {
+            totalCount: reviews.length,
+            averageRating: 5.0,
+            breakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        };
+        const countHeader = document.getElementById('novamallHeaderReviewCount');
+        if (countHeader) {
+            countHeader.innerHTML = `<strong>${stats.totalCount}</strong> Đánh Giá`;
+        }
+        const valHeader = document.getElementById('novamallHeaderRatingVal');
+        if (valHeader) {
+            valHeader.textContent = stats.averageRating.toFixed(1);
+        }
+        let currentFilterStar = 0;
+        let selectedFormStars = 5;
+        const renderReviewsView = () => {
+            const filteredReviews = currentFilterStar > 0
+                ? reviews.filter(r => Math.round(Number(r.rating)) === currentFilterStar)
+                : reviews;
+            const starIcons = (score) => {
+                const rounded = Math.round(score);
+                let html = '';
+                for (let i = 1; i <= 5; i++) {
+                    html += `<i class="${i <= rounded ? 'ri-star-fill' : 'ri-star-line'}"></i>`;
+                }
+                return html;
+            };
+            container.innerHTML = `
+                <div class="novamall-rating-summary">
+                    <div class="rating-score-box">
+                        <div>
+                            <span class="rating-score-num">${stats.averageRating.toFixed(1)}</span>
+                            <span class="rating-score-max">/ 5</span>
+                        </div>
+                        <div class="rating-score-stars">
+                            ${starIcons(stats.averageRating)}
+                        </div>
+                        <div class="rating-score-count">${stats.totalCount} đánh giá từ người mua</div>
+                    </div>
+                    <div class="rating-filter-chips">
+                        <button type="button" class="rating-filter-btn ${currentFilterStar === 0 ? 'active' : ''}" data-star="0">
+                            Tất cả (${stats.totalCount})
+                        </button>
+                        <button type="button" class="rating-filter-btn ${currentFilterStar === 5 ? 'active' : ''}" data-star="5">
+                            5 Sao (${stats.breakdown[5] || 0})
+                        </button>
+                        <button type="button" class="rating-filter-btn ${currentFilterStar === 4 ? 'active' : ''}" data-star="4">
+                            4 Sao (${stats.breakdown[4] || 0})
+                        </button>
+                        <button type="button" class="rating-filter-btn ${currentFilterStar === 3 ? 'active' : ''}" data-star="3">
+                            3 Sao (${stats.breakdown[3] || 0})
+                        </button>
+                        <button type="button" class="rating-filter-btn ${currentFilterStar === 2 ? 'active' : ''}" data-star="2">
+                            2 Sao (${stats.breakdown[2] || 0})
+                        </button>
+                        <button type="button" class="rating-filter-btn ${currentFilterStar === 1 ? 'active' : ''}" data-star="1">
+                            1 Sao (${stats.breakdown[1] || 0})
+                        </button>
+                    </div>
+                </div>
+
+                <div class="review-form-card">
+                    <div class="review-form-title">
+                        <i class="ri-edit-2-line" style="color: #ee4d2d;"></i>
+                        <span>Viết Đánh Giá Của Bạn Về Sản Phẩm</span>
+                    </div>
+                    <div class="review-star-picker">
+                        <span>Đánh giá:</span>
+                        <div id="interactiveStarPicker" style="display: flex; gap: 4px;">
+                            ${[1, 2, 3, 4, 5].map(st => `
+                                <i class="ri-star-fill star-interactive-item ${st <= selectedFormStars ? 'active' : ''}" data-val="${st}"></i>
+                            `).join('')}
+                        </div>
+                        <span id="starRatingLabel" style="font-weight: 700; color: #f59e0b; margin-left: 8px;">
+                            ${selectedFormStars === 5 ? 'Tuyệt vời' : selectedFormStars === 4 ? 'Rất tốt' : selectedFormStars === 3 ? 'Bình thường' : selectedFormStars === 2 ? 'Kém' : 'Rất tệ'}
+                        </span>
+                    </div>
+                    <div class="review-form-inputs">
+                        ${state.user ? `
+                            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 4px;">
+                                <i class="ri-user-smile-line"></i> Người đánh giá: <strong style="color: var(--text-main);">${state.user.name}</strong> (Tài khoản NovaShop)
+                            </div>
+                        ` : `
+                            <div style="margin-bottom: 6px;">
+                                <input type="text" id="reviewAuthorInput" class="form-input form-input-sm" placeholder="Họ và tên của bạn (hoặc đăng nhập để lưu vào tài khoản)" value="Khách hàng">
+                            </div>
+                        `}
+                        <textarea id="reviewCommentInput" class="review-textarea" placeholder="Hãy chia sẻ nhận xét chi tiết về chất lượng sản phẩm, độ hoàn thiện, đóng gói và dịch vụ giao hàng..."></textarea>
+                        <button type="button" id="submitReviewBtn" class="review-submit-btn">
+                            <i class="ri-send-plane-fill"></i> Gửi Đánh Giá
+                        </button>
+                    </div>
+                </div>
+
+                <div class="reviews-list-container">
+                    ${filteredReviews.length === 0 ? `
+                        <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.875rem;">
+                            Chưa có đánh giá nào cho mức sao này.
+                        </div>
+                    ` : filteredReviews.map(r => {
+                const initial = (r.userName || 'K').charAt(0).toUpperCase();
+                return `
+                            <div class="review-item-card">
+                                <div class="review-avatar-circle">${initial}</div>
+                                <div class="review-item-main">
+                                    <div class="review-author-line">
+                                        <span class="review-author-name">${r.userName}</span>
+                                        ${r.isBuyer ? `
+                                            <span class="verified-buyer-badge">
+                                                <i class="ri-checkbox-circle-fill"></i> Đã mua hàng tại NovaShop
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                    <div class="review-stars-row">
+                                        ${starIcons(r.rating)}
+                                    </div>
+                                    <div class="review-date-text">${formatDate(r.createdAt)}</div>
+                                    <div class="review-comment-body">${r.comment}</div>
+                                    ${r.replyComment ? `
+                                        <div class="review-reply-card">
+                                            <div class="review-reply-label"><i class="ri-store-2-line"></i> Phản Hồi Của NovaShop:</div>
+                                            <div class="review-reply-text">${r.replyComment}</div>
+                                        </div>
+                                    ` : ''}
+                                    <div class="review-actions-line" style="margin-top: 8px;">
+                                        <button type="button" class="review-helpful-action" data-id="${r.id}">
+                                            <i class="ri-thumb-up-line"></i> Hữu ích (${r.helpfulCount || 0})
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `;
+            bindReviewEvents();
+        };
+        const bindReviewEvents = () => {
+            container.querySelectorAll('.rating-filter-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const st = parseInt(btn.getAttribute('data-star') || '0', 10);
+                    currentFilterStar = st;
+                    renderReviewsView();
+                });
+            });
+            const picker = document.getElementById('interactiveStarPicker');
+            const label = document.getElementById('starRatingLabel');
+            if (picker) {
+                const labels = {
+                    1: 'Rất tệ',
+                    2: 'Kém',
+                    3: 'Bình thường',
+                    4: 'Rất tốt',
+                    5: 'Tuyệt vời'
+                };
+                picker.querySelectorAll('.star-interactive-item').forEach((starEl) => {
+                    starEl.addEventListener('mouseenter', () => {
+                        const val = parseInt(starEl.getAttribute('data-val') || '5', 10);
+                        picker.querySelectorAll('.star-interactive-item').forEach(s => {
+                            const sv = parseInt(s.getAttribute('data-val') || '0', 10);
+                            if (sv <= val)
+                                s.classList.add('hover');
+                            else
+                                s.classList.remove('hover');
+                        });
+                        if (label && labels[val])
+                            label.textContent = labels[val];
+                    });
+                    starEl.addEventListener('mouseleave', () => {
+                        picker.querySelectorAll('.star-interactive-item').forEach(s => s.classList.remove('hover'));
+                        if (label && labels[selectedFormStars])
+                            label.textContent = labels[selectedFormStars];
+                    });
+                    starEl.addEventListener('click', () => {
+                        selectedFormStars = parseInt(starEl.getAttribute('data-val') || '5', 10);
+                        picker.querySelectorAll('.star-interactive-item').forEach(s => {
+                            const sv = parseInt(s.getAttribute('data-val') || '0', 10);
+                            if (sv <= selectedFormStars)
+                                s.classList.add('active');
+                            else
+                                s.classList.remove('active');
+                        });
+                        if (label && labels[selectedFormStars])
+                            label.textContent = labels[selectedFormStars];
+                    });
+                });
+            }
+            const submitBtn = document.getElementById('submitReviewBtn');
+            const commentInput = document.getElementById('reviewCommentInput');
+            const authorInput = document.getElementById('reviewAuthorInput');
+            if (submitBtn && commentInput) {
+                submitBtn.addEventListener('click', async () => {
+                    const comment = commentInput.value.trim();
+                    if (!comment) {
+                        showToast('Nhắc nhở', 'Vui lòng nhập nội dung đánh giá sản phẩm', 'warning');
+                        commentInput.focus();
+                        return;
+                    }
+                    const userName = state.user ? state.user.name : (authorInput?.value.trim() || 'Khách hàng');
+                    submitBtn.setAttribute('disabled', 'true');
+                    submitBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang gửi...`;
+                    try {
+                        const postRes = await fetch(`${API_BASE}/api/products/${productId}/reviews`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                rating: selectedFormStars,
+                                comment,
+                                userName,
+                                userId: state.user?.id || null,
+                                isBuyer: true
+                            })
+                        });
+                        const postResult = await postRes.json();
+                        if (postResult.success) {
+                            showToast('Thành công', 'Cảm ơn bạn đã gửi đánh giá sản phẩm!', 'success');
+                            loadAndRenderProductReviews(productId);
+                        }
+                        else {
+                            showToast('Lỗi', postResult.message || 'Không thể gửi đánh giá', 'error');
+                            submitBtn.removeAttribute('disabled');
+                            submitBtn.innerHTML = `<i class="ri-send-plane-fill"></i> Gửi Đánh Giá`;
+                        }
+                    }
+                    catch {
+                        showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                        submitBtn.removeAttribute('disabled');
+                        submitBtn.innerHTML = `<i class="ri-send-plane-fill"></i> Gửi Đánh Giá`;
+                    }
+                });
+            }
+            container.querySelectorAll('.review-helpful-action').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('liked');
+                    if (btn.classList.contains('liked')) {
+                        btn.innerHTML = `<i class="ri-thumb-up-fill" style="color: #ee4d2d;"></i> Đã cảm ơn`;
+                    }
+                });
+            });
+        };
+        renderReviewsView();
+    }
+    catch {
+        container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Không thể tải đánh giá sản phẩm lúc này.</div>`;
+    }
+};
+function openProductDetail(product) {
     state.activeProduct = product;
     state.selectedQty = 1;
     const variants = product.variants && product.variants.length > 0 ? product.variants : [];
@@ -2124,7 +2578,7 @@ function openShopeeDetail(product) {
     const content = document.getElementById('quickviewContent');
     if (!modal || !content)
         return;
-    const renderShopeeModal = () => {
+    const renderProductDetailModal = () => {
         const v = state.selectedVariant;
         const currentPrice = v ? v.price : product.price;
         const originalPrice = v && v.originalPrice ? v.originalPrice : product.originalPrice;
@@ -2136,74 +2590,74 @@ function openShopeeDetail(product) {
             : [product.imageUrl];
         const uniqueThumbs = Array.from(new Set([product.imageUrl, ...allThumbnails]));
         content.innerHTML = `
-        <div class="shopee-main-grid">
-            <div class="shopee-gallery">
-                <div class="shopee-main-image-wrap">
-                    <img id="shopeeMainImg" src="${activeImage}" alt="${product.name}" class="shopee-main-image">
+        <div class="novamall-main-grid">
+            <div class="novamall-gallery">
+                <div class="novamall-main-image-wrap">
+                    <img id="novamallMainImg" src="${activeImage}" alt="${product.name}" class="novamall-main-image">
                 </div>
-                <div class="shopee-thumbnails">
+                <div class="novamall-thumbnails">
                     ${uniqueThumbs.map(imgUrl => `
-                        <img src="${imgUrl}" alt="Thumbnail" class="shopee-thumb-item ${imgUrl === activeImage ? 'active' : ''}" data-thumb="${imgUrl}">
+                        <img src="${imgUrl}" alt="Thumbnail" class="novamall-thumb-item ${imgUrl === activeImage ? 'active' : ''}" data-thumb="${imgUrl}">
                     `).join('')}
                 </div>
-                <div class="shopee-commitments">
-                    <div class="shopee-commit-item">
+                <div class="novamall-commitments">
+                    <div class="novamall-commit-item">
                         <i class="ri-arrow-go-back-line"></i>
                         <span>7 ngày miễn phí đổi trả</span>
                     </div>
-                    <div class="shopee-commit-item">
+                    <div class="novamall-commit-item">
                         <i class="ri-shield-star-line"></i>
                         <span>Hàng chính hãng 100%</span>
                     </div>
-                    <div class="shopee-commit-item">
+                    <div class="novamall-commit-item">
                         <i class="ri-truck-line"></i>
                         <span>Miễn phí vận chuyển</span>
                     </div>
                 </div>
             </div>
 
-            <div class="shopee-info-col">
-                <div class="shopee-title-area">
-                    <span class="shopee-mall-tag">Chính Hãng</span>
-                    <h2 class="shopee-product-title">${product.name}</h2>
+            <div class="novamall-info-col">
+                <div class="novamall-title-area">
+                    <span class="novamall-mall-tag">Chính Hãng</span>
+                    <h2 class="novamall-product-title">${product.name}</h2>
                 </div>
 
-                <div class="shopee-rating-strip">
-                    <div class="shopee-rating-val">
+                <div class="novamall-rating-strip">
+                    <div class="novamall-rating-val">
                         <span>${product.rating || '5.0'}</span>
-                        <i class="ri-star-fill shopee-rating-stars"></i>
+                        <i class="ri-star-fill novamall-rating-stars"></i>
                     </div>
-                    <div class="shopee-meta-divider"></div>
+                    <div class="novamall-meta-divider"></div>
                     <div><strong>${product.sold || product.soldCount || 100}</strong> Đã Bán</div>
-                    <div class="shopee-meta-divider"></div>
+                    <div class="novamall-meta-divider"></div>
                     <div>Kho: <strong>${stock}</strong> sản phẩm</div>
                 </div>
 
-                <div class="shopee-price-box">
+                <div class="novamall-price-box">
                     ${product.isFlashSale ? `
-                        <div class="shopee-flash-banner">
+                        <div class="novamall-flash-banner">
                             <span><i class="ri-flashlight-fill" style="color: #ffd839;"></i> FLASH SALE GIÁ SỐC</span>
                         </div>
                     ` : ''}
                     ${originalPrice && originalPrice > currentPrice ? `
-                        <div class="shopee-price-original">${formatPrice(originalPrice)}</div>
+                        <div class="novamall-price-original">${formatPrice(originalPrice)}</div>
                     ` : ''}
-                    <div id="shopeeDisplayPrice" class="shopee-price-current">${formatPrice(currentPrice)}</div>
+                    <div id="novamallDisplayPrice" class="novamall-price-current">${formatPrice(currentPrice)}</div>
                     ${discount > 0 ? `
-                        <span id="shopeeDisplayDiscount" class="shopee-price-discount">-${discount}% GIẢM</span>
+                        <span id="novamallDisplayDiscount" class="novamall-price-discount">-${discount}% GIẢM</span>
                     ` : ''}
                 </div>
 
-                <div class="shopee-variant-group">
+                <div class="novamall-variant-group">
                     ${uniqueColors.length > 0 ? `
-                        <div class="shopee-variant-row">
-                            <div class="shopee-variant-label">Màu Sắc</div>
-                            <div class="shopee-variant-options">
+                        <div class="novamall-variant-row">
+                            <div class="novamall-variant-label">Màu Sắc</div>
+                            <div class="novamall-variant-options">
                                 ${uniqueColors.map(color => {
             const sampleVar = variants.find(varItem => varItem.color === color && varItem.imageUrl);
-            const thumbImg = sampleVar ? `<img src="${sampleVar.imageUrl}" class="shopee-option-btn-thumb" alt="${color}">` : '';
+            const thumbImg = sampleVar ? `<img src="${sampleVar.imageUrl}" class="novamall-option-btn-thumb" alt="${color}">` : '';
             return `
-                                    <button class="shopee-option-btn ${color === state.selectedColor ? 'active' : ''}" data-color="${color}" type="button">
+                                    <button class="novamall-option-btn ${color === state.selectedColor ? 'active' : ''}" data-color="${color}" type="button">
                                         ${thumbImg}
                                         <span>${color}</span>
                                     </button>
@@ -2214,11 +2668,11 @@ function openShopeeDetail(product) {
                     ` : ''}
 
                     ${uniqueTypes.length > 0 ? `
-                        <div class="shopee-variant-row">
-                            <div class="shopee-variant-label">Phân Loại</div>
-                            <div class="shopee-variant-options">
+                        <div class="novamall-variant-row">
+                            <div class="novamall-variant-label">Phân Loại</div>
+                            <div class="novamall-variant-options">
                                 ${uniqueTypes.map(type => `
-                                    <button class="shopee-option-btn ${type === state.selectedType ? 'active' : ''}" data-type="${type}" type="button">
+                                    <button class="novamall-option-btn ${type === state.selectedType ? 'active' : ''}" data-type="${type}" type="button">
                                         <span>${type}</span>
                                     </button>
                                 `).join('')}
@@ -2226,25 +2680,25 @@ function openShopeeDetail(product) {
                         </div>
                     ` : ''}
 
-                    <div class="shopee-quantity-row">
-                        <div class="shopee-variant-label">Số Lượng</div>
-                        <div class="shopee-qty-wrapper">
-                            <button class="shopee-qty-btn" id="shopeeModalQtyMinus" type="button">-</button>
-                            <input id="shopeeModalQtyInput" type="text" class="shopee-qty-input" value="${state.selectedQty}" readonly>
-                            <button class="shopee-qty-btn" id="shopeeModalQtyPlus" type="button">+</button>
+                    <div class="novamall-quantity-row">
+                        <div class="novamall-variant-label">Số Lượng</div>
+                        <div class="novamall-qty-wrapper">
+                            <button class="novamall-qty-btn" id="novamallModalQtyMinus" type="button">-</button>
+                            <input id="novamallModalQtyInput" type="text" class="novamall-qty-input" value="${state.selectedQty}" readonly>
+                            <button class="novamall-qty-btn" id="novamallModalQtyPlus" type="button">+</button>
                         </div>
-                        <div class="shopee-stock-text">
+                        <div class="novamall-stock-text">
                             ${stock > 0 ? `Còn ${stock} sản phẩm có sẵn` : '<span style="color: var(--accent); font-weight: 700;">Tạm hết hàng</span>'}
                         </div>
                     </div>
                 </div>
 
-                <div class="shopee-actions-row">
-                    <button id="shopeeAddCartBtn" class="shopee-btn-add-cart" ${stock <= 0 ? 'disabled' : ''} type="button">
+                <div class="novamall-actions-row">
+                    <button id="novamallAddCartBtn" class="novamall-btn-add-cart" ${stock <= 0 ? 'disabled' : ''} type="button">
                         <i class="ri-shopping-cart-2-line" style="font-size: 1.25rem;"></i>
                         <span>Thêm Vào Giỏ Hàng</span>
                     </button>
-                    <button id="shopeeBuyNowBtn" class="shopee-btn-buy-now" ${stock <= 0 ? 'disabled' : ''} type="button">
+                    <button id="novamallBuyNowBtn" class="novamall-btn-buy-now" ${stock <= 0 ? 'disabled' : ''} type="button">
                         <i class="ri-flashlight-fill"></i>
                         <span>Mua Ngay</span>
                     </button>
@@ -2252,12 +2706,12 @@ function openShopeeDetail(product) {
             </div>
         </div>
 
-        <div class="shopee-detail-tabs">
-            <div class="shopee-section-heading">
+        <div class="novamall-detail-tabs">
+            <div class="novamall-section-heading">
                 <i class="ri-file-list-3-line" style="color: #ee4d2d;"></i>
                 <span>CHI TIẾT SẢN PHẨM</span>
             </div>
-            <table class="shopee-specs-table">
+            <table class="novamall-specs-table">
                 <tbody>
                     <tr>
                         <td>Danh Mục</td>
@@ -2274,16 +2728,29 @@ function openShopeeDetail(product) {
                 </tbody>
             </table>
 
-            <div class="shopee-section-heading">
+            <div class="novamall-section-heading">
                 <i class="ri-article-line" style="color: #ee4d2d;"></i>
                 <span>MÔ TẢ SẢN PHẨM</span>
             </div>
-            <div class="shopee-desc-content">
+            <div class="novamall-desc-content">
                 <p>${product.description || 'Sản phẩm chính hãng với tiêu chuẩn chất lượng cao, bảo hành điện tử chính hãng toàn quốc.'}</p>
+            </div>
+
+            <div class="novamall-reviews-section">
+                <div class="novamall-section-heading">
+                    <i class="ri-star-smile-line" style="color: #ee4d2d;"></i>
+                    <span>ĐÁNH GIÁ SẢN PHẨM</span>
+                </div>
+                <div id="productReviewsContainer">
+                    <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+                        <i class="ri-loader-4-line ri-spin" style="font-size: 1.5rem;"></i>
+                        <p style="margin-top: 8px;">Đang tải đánh giá từ hệ thống...</p>
+                    </div>
+                </div>
             </div>
         </div>
         `;
-        content.querySelectorAll('.shopee-thumb-item').forEach((thumb) => {
+        content.querySelectorAll('.novamall-thumb-item').forEach((thumb) => {
             thumb.addEventListener('click', () => {
                 const imgUrl = thumb.getAttribute('data-thumb');
                 if (!imgUrl)
@@ -2295,13 +2762,13 @@ function openShopeeDetail(product) {
                     if (matchedVariant.type)
                         state.selectedType = matchedVariant.type;
                     state.selectedVariant = matchedVariant;
-                    renderShopeeModal();
+                    renderProductDetailModal();
                 }
                 else {
-                    const mainImg = document.getElementById('shopeeMainImg');
+                    const mainImg = document.getElementById('novamallMainImg');
                     if (mainImg)
                         mainImg.src = imgUrl;
-                    content.querySelectorAll('.shopee-thumb-item').forEach(t => t.classList.remove('active'));
+                    content.querySelectorAll('.novamall-thumb-item').forEach(t => t.classList.remove('active'));
                     thumb.classList.add('active');
                 }
             });
@@ -2314,19 +2781,19 @@ function openShopeeDetail(product) {
                 if (matched && matched.type) {
                     state.selectedType = matched.type;
                 }
-                renderShopeeModal();
+                renderProductDetailModal();
             });
         });
         content.querySelectorAll('[data-type]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 state.selectedType = btn.getAttribute('data-type') || '';
                 state.selectedVariant = findCurrentVariant();
-                renderShopeeModal();
+                renderProductDetailModal();
             });
         });
-        const qtyInput = document.getElementById('shopeeModalQtyInput');
-        const minusBtn = document.getElementById('shopeeModalQtyMinus');
-        const plusBtn = document.getElementById('shopeeModalQtyPlus');
+        const qtyInput = document.getElementById('novamallModalQtyInput');
+        const minusBtn = document.getElementById('novamallModalQtyMinus');
+        const plusBtn = document.getElementById('novamallModalQtyPlus');
         if (minusBtn && qtyInput) {
             minusBtn.addEventListener('click', () => {
                 if (state.selectedQty > 1) {
@@ -2344,7 +2811,7 @@ function openShopeeDetail(product) {
                 }
             });
         }
-        const addCartBtn = document.getElementById('shopeeAddCartBtn');
+        const addCartBtn = document.getElementById('novamallAddCartBtn');
         if (addCartBtn) {
             addCartBtn.addEventListener('click', () => {
                 const varLabel = state.selectedVariant
@@ -2354,7 +2821,7 @@ function openShopeeDetail(product) {
                 modal.classList.remove('active');
             });
         }
-        const buyNowBtn = document.getElementById('shopeeBuyNowBtn');
+        const buyNowBtn = document.getElementById('novamallBuyNowBtn');
         if (buyNowBtn) {
             buyNowBtn.addEventListener('click', () => {
                 const varLabel = state.selectedVariant
@@ -2366,8 +2833,9 @@ function openShopeeDetail(product) {
             });
         }
     };
-    renderShopeeModal();
+    renderProductDetailModal();
     modal.classList.add('active');
+    loadAndRenderProductReviews(product.id);
 }
 const addItemToCart = (product, quantity = 1, variantName) => {
     const itemPrice = state.selectedVariant ? state.selectedVariant.price : product.price;
@@ -2392,12 +2860,63 @@ const addItemToCart = (product, quantity = 1, variantName) => {
 };
 const initCartView = () => {
     renderCartItemsList();
+    loadAvailableVouchers();
     const checkoutForm = document.getElementById('checkoutSubmitForm');
     const confirmBtn = document.getElementById('confirmOrderBtn');
     const nameInput = document.getElementById('checkoutName');
     const phoneInput = document.getElementById('checkoutPhone');
     const addressInput = document.getElementById('checkoutAddress');
     const paymentSelect = document.getElementById('checkoutPayment');
+    const toggleVouchersBtn = document.getElementById('toggleVouchersBtn');
+    const voucherSuggestions = document.getElementById('voucherSuggestions');
+    const applyVoucherBtn = document.getElementById('applyVoucherBtn');
+    const voucherCodeInput = document.getElementById('voucherCodeInput');
+    if (toggleVouchersBtn && voucherSuggestions) {
+        toggleVouchersBtn.addEventListener('click', () => {
+            const isHidden = voucherSuggestions.style.display === 'none';
+            voucherSuggestions.style.display = isHidden ? 'flex' : 'none';
+            toggleVouchersBtn.innerHTML = isHidden
+                ? 'Thu gọn <i class="ri-arrow-up-s-line"></i>'
+                : 'Danh sách voucher <i class="ri-arrow-down-s-line"></i>';
+        });
+    }
+    if (applyVoucherBtn && voucherCodeInput) {
+        applyVoucherBtn.addEventListener('click', async () => {
+            const code = voucherCodeInput.value.trim().toUpperCase();
+            if (!code) {
+                showToast('Thông báo', 'Vui lòng nhập mã ưu đãi', 'warning');
+                return;
+            }
+            const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            try {
+                const res = await fetch(`${API_BASE}/api/orders/vouchers/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, orderTotal: subtotal })
+                });
+                const result = await res.json();
+                if (result.success && result.data) {
+                    state.appliedVoucher = {
+                        code: result.data.voucher.code,
+                        name: result.data.voucher.name,
+                        discountAmount: result.data.discountAmount,
+                        discountType: result.data.voucher.discountType,
+                        discountValue: result.data.voucher.discountValue,
+                        minOrderValue: result.data.voucher.minOrderValue,
+                        maxDiscount: result.data.voucher.maxDiscount
+                    };
+                    showToast('Thành công', `Đã áp dụng mã: ${result.data.voucher.name}`, 'success');
+                    renderCartItemsList();
+                }
+                else {
+                    showToast('Không thể áp dụng', result.message || 'Mã ưu đãi không hợp lệ', 'error');
+                }
+            }
+            catch {
+                showToast('Lỗi', 'Không thể kết nối đến máy chủ kiểm tra voucher', 'error');
+            }
+        });
+    }
     if (checkoutForm && confirmBtn) {
         checkoutForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -2411,7 +2930,8 @@ const initCartView = () => {
                 customerPhone: phoneInput ? phoneInput.value.trim() : '',
                 shippingAddress: addressInput ? addressInput.value.trim() : '',
                 paymentMethod: paymentSelect ? paymentSelect.value : 'cod',
-                items: state.cart
+                items: state.cart,
+                voucherCode: state.appliedVoucher ? state.appliedVoucher.code : undefined
             };
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = `<span>Đang xử lý đơn hàng...</span> <i class="ri-loader-4-line ri-spin"></i>`;
@@ -2427,6 +2947,7 @@ const initCartView = () => {
                 const result = await res.json();
                 if (result.success) {
                     state.cart = [];
+                    state.appliedVoucher = null;
                     saveCart();
                     showToast('Thành công', `Đặt hàng thành công! Mã đơn: #${result.data.id}`, 'success');
                     setTimeout(() => {
@@ -2447,6 +2968,42 @@ const initCartView = () => {
         });
     }
 };
+const loadAvailableVouchers = async () => {
+    const suggEl = document.getElementById('voucherSuggestions');
+    if (!suggEl)
+        return;
+    try {
+        const res = await fetch(`${API_BASE}/api/orders/vouchers`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+            state.availableVouchers = data.data;
+            suggEl.innerHTML = state.availableVouchers.map((v) => `
+                <div class="voucher-ticket">
+                    <div>
+                        <div class="voucher-ticket-code">${v.code}</div>
+                        <div class="voucher-ticket-desc">${v.description}</div>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm voucher-ticket-btn" data-use-voucher="${v.code}">
+                        Dùng ngay
+                    </button>
+                </div>
+            `).join('');
+            suggEl.querySelectorAll('[data-use-voucher]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const code = btn.getAttribute('data-use-voucher');
+                    const codeInput = document.getElementById('voucherCodeInput');
+                    const applyBtn = document.getElementById('applyVoucherBtn');
+                    if (codeInput && code) {
+                        codeInput.value = code;
+                        if (applyBtn)
+                            applyBtn.click();
+                    }
+                });
+            });
+        }
+    }
+    catch { }
+};
 const renderCartItemsList = () => {
     const emptyView = document.getElementById('emptyCartView');
     const activeView = document.getElementById('activeCartView');
@@ -2466,13 +3023,68 @@ const renderCartItemsList = () => {
     if (activeView)
         activeView.style.display = 'grid';
     const totalCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    let discount = 0;
+    if (state.appliedVoucher) {
+        if (state.appliedVoucher.minOrderValue && subtotal < state.appliedVoucher.minOrderValue) {
+            state.appliedVoucher = null;
+            showToast('Thông báo', 'Đơn hàng không còn đủ giá trị tối thiểu để áp dụng mã', 'warning');
+        }
+        else {
+            if (state.appliedVoucher.discountType === 'percent' && state.appliedVoucher.discountValue) {
+                discount = Math.round((subtotal * state.appliedVoucher.discountValue) / 100);
+                if (state.appliedVoucher.maxDiscount && discount > state.appliedVoucher.maxDiscount) {
+                    discount = state.appliedVoucher.maxDiscount;
+                }
+            }
+            else {
+                discount = state.appliedVoucher.discountAmount;
+            }
+            discount = Math.min(discount, subtotal);
+            state.appliedVoucher.discountAmount = discount;
+        }
+    }
+    const grandTotal = Math.max(0, subtotal - discount);
     if (headerCount)
         headerCount.textContent = `${totalCount} sản phẩm`;
     if (summarySubtotal)
-        summarySubtotal.textContent = formatPrice(totalAmount);
+        summarySubtotal.textContent = formatPrice(subtotal);
+    const discountRow = document.getElementById('voucherDiscountRow');
+    const voucherCodeLabel = document.getElementById('summaryVoucherCode');
+    const voucherDiscountLabel = document.getElementById('summaryVoucherDiscount');
+    const appliedContainer = document.getElementById('appliedVoucherContainer');
+    if (discountRow && voucherCodeLabel && voucherDiscountLabel && appliedContainer) {
+        if (state.appliedVoucher && discount > 0) {
+            discountRow.style.display = 'flex';
+            voucherCodeLabel.textContent = state.appliedVoucher.code;
+            voucherDiscountLabel.textContent = `-${formatPrice(discount)}`;
+            appliedContainer.innerHTML = `
+                <div class="cart-applied-voucher-badge">
+                    <span><i class="ri-checkbox-circle-fill"></i> Đã áp dụng: <strong>${state.appliedVoucher.code}</strong> (-${formatPrice(discount)})</span>
+                    <button type="button" class="cart-remove-voucher-btn" id="removeVoucherBtn" title="Gỡ mã">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </div>
+            `;
+            const removeBtn = document.getElementById('removeVoucherBtn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    state.appliedVoucher = null;
+                    const codeInp = document.getElementById('voucherCodeInput');
+                    if (codeInp)
+                        codeInp.value = '';
+                    showToast('Thông báo', 'Đã gỡ mã giảm giá', 'warning');
+                    renderCartItemsList();
+                });
+            }
+        }
+        else {
+            discountRow.style.display = 'none';
+            appliedContainer.innerHTML = '';
+        }
+    }
     if (summaryGrandTotal)
-        summaryGrandTotal.textContent = formatPrice(totalAmount);
+        summaryGrandTotal.textContent = formatPrice(grandTotal);
     if (itemsList) {
         itemsList.innerHTML = state.cart.map((item, index) => `
             <div class="cart-item-row">
@@ -2546,7 +3158,8 @@ const initOrdersView = async () => {
                     const statusMap = {
                         completed: { label: 'Hoàn thành', class: 'status-completed' },
                         processing: { label: 'Đang xử lý', class: 'status-processing' },
-                        pending: { label: 'Chờ xác nhận', class: 'status-pending' }
+                        pending: { label: 'Chờ xác nhận', class: 'status-pending' },
+                        cancelled: { label: 'Đã hủy', class: 'status-cancelled' }
                     };
                     const statusInfo = statusMap[order.status] || { label: order.status, class: 'status-pending' };
                     return `
@@ -2578,17 +3191,59 @@ const initOrdersView = async () => {
                         </div>
 
                         <div class="order-card-bottom">
-                            <div style="font-size: 0.8125rem; color: var(--text-muted);">
-                                Người nhận: <strong>${order.customerName}</strong> (${order.customerPhone})
+                            <div>
+                                <div style="font-size: 0.8125rem; color: var(--text-muted);">
+                                    Người nhận: <strong>${order.customerName}</strong> (${order.customerPhone})
+                                </div>
+                                ${order.voucherCode ? `
+                                    <div class="order-voucher-badge">
+                                        <i class="ri-coupon-3-line"></i> Đã áp dụng voucher: <strong>${order.voucherCode}</strong> ${order.discountAmount ? `(-${formatPrice(order.discountAmount)})` : ''}
+                                    </div>
+                                ` : ''}
                             </div>
-                            <div class="order-total-group">
-                                <span class="order-total-label">Tổng số tiền:</span>
-                                <span class="order-total-val">${formatPrice(order.totalAmount)}</span>
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                ${order.status === 'pending' ? `
+                                    <button class="btn btn-outline btn-sm cancel-order-btn" data-id="${order.id}" style="color: #ef4444; border-color: #fecdd3; padding: 4px 10px;" type="button">
+                                        <i class="ri-close-circle-line"></i> Hủy đơn
+                                    </button>
+                                ` : ''}
+                                <div class="order-total-group">
+                                    <span class="order-total-label">Tổng số tiền:</span>
+                                    <span class="order-total-val">${formatPrice(order.totalAmount)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                     `;
                 }).join('');
+                listEl.querySelectorAll('.cancel-order-btn').forEach((btn) => {
+                    btn.addEventListener('click', async () => {
+                        const id = btn.getAttribute('data-id');
+                        if (confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
+                            try {
+                                const res = await fetch(`${API_BASE}/api/orders/${id}/status`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                                    },
+                                    body: JSON.stringify({ status: 'cancelled' })
+                                });
+                                const result = await res.json();
+                                if (result.success) {
+                                    showToast('Thành công', 'Đã hủy đơn hàng thành công', 'success');
+                                    initOrdersView();
+                                }
+                                else {
+                                    showToast('Lỗi', result.message || 'Không thể hủy đơn hàng', 'error');
+                                }
+                            }
+                            catch {
+                                showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                            }
+                        }
+                    });
+                });
             }
         }
         else {
@@ -2727,7 +3382,6 @@ const initChatWidget = () => {
     const launcherBtn = document.getElementById('chatLauncherBtn');
     const chatWindow = document.getElementById('chatWidgetWindow');
     const closeBtn = document.getElementById('chatCloseBtn');
-    const modeToggleBtn = document.getElementById('chatModeToggleBtn');
     const chatForm = document.getElementById('chatMessageForm');
     const chatInput = document.getElementById('chatInput');
     if (launcherBtn && chatWindow) {
@@ -2735,7 +3389,8 @@ const initChatWidget = () => {
             state.chatOpen = !state.chatOpen;
             if (state.chatOpen) {
                 chatWindow.classList.add('active');
-                if (!state.chatSessionId) {
+                renderChatMessages();
+                if (!state.chatSessionId || state.chatSessionId === 'undefined') {
                     startChatSession();
                 }
                 else {
@@ -2751,11 +3406,6 @@ const initChatWidget = () => {
         closeBtn.addEventListener('click', () => {
             state.chatOpen = false;
             chatWindow.classList.remove('active');
-        });
-    }
-    if (modeToggleBtn) {
-        modeToggleBtn.addEventListener('click', () => {
-            requestHumanSupport();
         });
     }
     if (chatForm && chatInput) {
@@ -2784,106 +3434,130 @@ const startChatSession = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 userId: state.user?.id || null,
-                guestName: state.user?.name || 'Khách vãng lai',
-                guestEmail: state.user?.email || 'guest@novashop.local'
+                customerName: state.user?.name || 'Khách hàng',
+                customerEmail: state.user?.email || ''
             })
         });
         const data = await res.json();
         if (data.success && data.data) {
-            state.chatSessionId = data.data.id;
-            state.chatSession = data.data;
-            localStorage.setItem('novashop_chat_session', data.data.id);
-            loadChatMessages();
+            const sess = data.data.session || data.data;
+            if (sess && sess.id) {
+                state.chatSessionId = sess.id;
+                state.chatSession = sess;
+                state.chatMessages = data.data.messages || [];
+                localStorage.setItem('novashop_chat_session', sess.id);
+                renderChatMessages();
+            }
         }
-    }
-    catch { }
-};
-const loadChatMessages = async () => {
-    if (!state.chatSessionId)
-        return;
-    try {
-        const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}`);
-        const data = await res.json();
-        if (data.success && data.data) {
-            state.chatSession = data.data.session;
-            state.chatMessages = data.data.messages || [];
-            updateChatHeaderMode();
+        else {
             renderChatMessages();
         }
     }
-    catch { }
-};
-const updateChatHeaderMode = () => {
-    const badge = document.getElementById('chatModeBadge');
-    const label = document.getElementById('chatModeToggleLabel');
-    if (!badge || !label)
-        return;
-    if (state.chatSession?.status === 'human_waiting') {
-        badge.className = 'chat-human-pill';
-        badge.textContent = 'CHỜ CSKH';
-        label.textContent = 'Đang đợi';
-    }
-    else if (state.chatSession?.status === 'human_active') {
-        badge.className = 'chat-human-pill';
-        badge.textContent = 'CSKH TRỰC TIẾP';
-        label.textContent = 'Về AI';
-    }
-    else {
-        badge.className = 'chat-ai-pill';
-        badge.textContent = 'GEMINI AI';
-        label.textContent = 'Gặp CSKH';
+    catch {
+        renderChatMessages();
     }
 };
-const requestHumanSupport = async () => {
-    if (!state.chatSessionId)
+const loadChatMessages = async () => {
+    if (!state.chatSessionId || state.chatSessionId === 'undefined') {
+        state.chatSessionId = '';
+        localStorage.removeItem('novashop_chat_session');
+        await startChatSession();
         return;
+    }
     try {
-        const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}/human-request`, {
-            method: 'POST'
-        });
+        const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}`);
         const data = await res.json();
-        if (data.success) {
-            showToast('Hỗ trợ khách hàng', 'Đã chuyển yêu cầu tới nhân viên CSKH', 'success');
-            loadChatMessages();
+        if (data.success && data.data && data.data.session) {
+            state.chatSession = data.data.session;
+            state.chatMessages = data.data.messages || [];
+            renderChatMessages();
+        }
+        else {
+            state.chatSessionId = '';
+            localStorage.removeItem('novashop_chat_session');
+            await startChatSession();
         }
     }
-    catch { }
+    catch {
+        renderChatMessages();
+    }
 };
 const sendChatMessage = async (text) => {
-    if (!state.chatSessionId) {
+    if (!state.chatSessionId || state.chatSessionId === 'undefined') {
         await startChatSession();
     }
     if (!state.chatSessionId)
         return;
-    appendTempUserMessage(text);
+    const tempUserMsg = {
+        id: `temp_${Date.now()}`,
+        sessionId: state.chatSessionId,
+        sender: 'user',
+        message: text,
+        createdAt: new Date().toISOString()
+    };
+    state.chatMessages.push(tempUserMsg);
+    renderChatMessages();
+    showChatTyping();
     try {
         const res = await fetch(`${API_BASE}/api/chat/session/${state.chatSessionId}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({
+                sessionId: state.chatSessionId,
+                message: text,
+                sender: 'customer',
+                senderName: state.user?.name || 'Khách hàng'
+            })
         });
         const data = await res.json();
-        if (data.success) {
-            loadChatMessages();
+        removeChatTyping();
+        if (data.success && data.data) {
+            if (data.data.aiMessage) {
+                const ai = data.data.aiMessage;
+                state.chatMessages.push({
+                    id: ai.id,
+                    sessionId: state.chatSessionId,
+                    sender: 'ai',
+                    message: ai.message,
+                    productRecommendations: ai.suggestedProducts || [],
+                    createdAt: ai.createdAt
+                });
+            }
+            else {
+                await loadChatMessages();
+            }
+            renderChatMessages();
+        }
+        else {
+            showToast('Thông báo', data.message || 'Không thể gửi tin nhắn', 'warning');
         }
     }
     catch {
-        showToast('Lỗi gửi tin', 'Không thể kết nối đến máy chủ live chat', 'error');
+        removeChatTyping();
+        showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ hỗ trợ', 'error');
     }
 };
-const appendTempUserMessage = (text) => {
+const showChatTyping = () => {
     const container = document.getElementById('chatMessagesContainer');
     if (!container)
         return;
-    const el = document.createElement('div');
-    el.className = 'chat-msg chat-msg-user';
-    el.innerHTML = `
-        <div class="chat-bubble chat-bubble-user">
-            ${escapeHtml(text)}
+    removeChatTyping();
+    const typingEl = document.createElement('div');
+    typingEl.id = 'chatTypingIndicator';
+    typingEl.className = 'chat-msg chat-msg-ai';
+    typingEl.innerHTML = `
+        <div class="chat-bubble chat-bubble-ai" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; font-size: 0.8125rem; color: var(--text-muted);">
+            <i class="ri-loader-4-line" style="animation: spin 1s linear infinite;"></i>
+            <span>Tư vấn viên đang soạn câu trả lời...</span>
         </div>
     `;
-    container.appendChild(el);
+    container.appendChild(typingEl);
     container.scrollTop = container.scrollHeight;
+};
+const removeChatTyping = () => {
+    const el = document.getElementById('chatTypingIndicator');
+    if (el)
+        el.remove();
 };
 const renderChatMessages = () => {
     const container = document.getElementById('chatMessagesContainer');
@@ -2892,27 +3566,41 @@ const renderChatMessages = () => {
     if (state.chatMessages.length === 0) {
         container.innerHTML = `
             <div class="chat-msg chat-msg-ai">
+                <div class="chat-sender-name" style="font-size: 0.6875rem; color: var(--text-muted); margin-bottom: 3px; font-weight: 600;">Tư Vấn Viên</div>
                 <div class="chat-bubble chat-bubble-ai">
-                    Xin chào! Tôi là Trợ lý AI của NovaShop. Tôi có thể hỗ trợ bạn tìm kiếm sản phẩm, kiểm tra đơn hàng hoặc trả lời các thắc mắc mua sắm!
+                    Xin chào! Cảm ơn bạn đã ghé thăm NovaShop. Chúng tôi có thể hỗ trợ gì cho bạn hôm nay? (Thông tin sản phẩm, đơn hàng, bảo hành hoặc thời gian giao hàng)
                 </div>
             </div>
         `;
         return;
     }
     container.innerHTML = state.chatMessages.map((msg) => {
-        const isUser = msg.sender === 'user';
+        const isUser = msg.sender === 'user' || msg.sender === 'customer';
         const senderClass = isUser ? 'chat-msg-user' : 'chat-msg-ai';
         const bubbleClass = isUser ? 'chat-bubble-user' : 'chat-bubble-ai';
-        const recCards = (msg.productRecommendations && msg.productRecommendations.length > 0)
+        const senderLabel = isUser ? 'Bạn' : 'Tư Vấn Viên';
+        const rawRecs = msg.suggestedProducts || msg.productRecommendations || [];
+        let prods = [];
+        if (typeof rawRecs === 'string') {
+            try {
+                prods = JSON.parse(rawRecs);
+            }
+            catch { }
+        }
+        else if (Array.isArray(rawRecs)) {
+            prods = rawRecs;
+        }
+        const recCards = (prods && prods.length > 0)
             ? `
             <div class="chat-recs-grid">
-                ${msg.productRecommendations.map((prod) => `
+                ${prods.map((prod) => `
                     <div class="chat-rec-item" data-rec-id="${prod.id}">
-                        <img src="${prod.imageUrl}" alt="${prod.name}" class="chat-rec-thumb">
+                        <img src="${prod.imageUrl || ''}" alt="${escapeHtml(prod.name || '')}" class="chat-rec-thumb" onerror="this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80'">
                         <div class="chat-rec-info">
-                            <div class="chat-rec-name">${prod.name}</div>
-                            <div class="chat-rec-price">${formatPrice(prod.price)}</div>
+                            <div class="chat-rec-name" title="${escapeHtml(prod.name || '')}">${escapeHtml(prod.name || '')}</div>
+                            <div class="chat-rec-price">${formatPrice(prod.price || 0)}</div>
                         </div>
+                        <span class="chat-rec-btn"><i class="ri-eye-line"></i> Xem</span>
                     </div>
                 `).join('')}
             </div>
@@ -2920,10 +3608,11 @@ const renderChatMessages = () => {
             : '';
         return `
             <div class="chat-msg ${senderClass}">
+                <div class="chat-sender-name" style="font-size: 0.6875rem; color: var(--text-muted); margin-bottom: 3px; font-weight: 600;">${senderLabel}</div>
                 <div class="chat-bubble ${bubbleClass}">
-                    ${escapeHtml(msg.message)}
-                    ${recCards}
+                    ${escapeHtml(msg.message).trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
                 </div>
+                ${recCards}
             </div>
         `;
     }).join('');
@@ -2933,7 +3622,7 @@ const renderChatMessages = () => {
             const id = item.getAttribute('data-rec-id');
             const found = state.products.find(p => p.id.toString() === id?.toString());
             if (found)
-                openShopeeDetail(found);
+                openProductDetail(found);
         });
     });
 };

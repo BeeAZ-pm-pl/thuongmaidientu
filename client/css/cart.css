@@ -191,3 +191,117 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Voucher & Coupon Styles */
+.cart-voucher-section {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.cart-voucher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cart-voucher-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cart-voucher-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.cart-voucher-input {
+  flex: 1;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.cart-applied-voucher-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.cart-remove-voucher-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+}
+
+.cart-remove-voucher-btn:hover {
+  opacity: 0.8;
+}
+
+.voucher-suggestions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.voucher-ticket {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.voucher-ticket:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.voucher-ticket-code {
+  font-weight: 800;
+  font-size: 0.8125rem;
+  color: var(--primary);
+  letter-spacing: 0.5px;
+}
+
+.voucher-ticket-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.voucher-ticket-btn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  font-weight: 700;
+}
+
