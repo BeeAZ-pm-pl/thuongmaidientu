@@ -63,7 +63,8 @@ export const getMessages = async (req: Request, res: Response): Promise<Response
 
 export const sendMessage = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { sessionId, message, sender = 'customer', senderName = 'Khách hàng' } = req.body;
+    const sessionId = req.body.sessionId || req.params.sessionId;
+    const { message, sender = 'customer', senderName = 'Khách hàng' } = req.body;
     if (!sessionId || !message || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã phiên và nội dung tin nhắn' });
     }
@@ -87,7 +88,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<Response
       const aiMsg = await chatModel.addMessage({
         sessionId,
         sender: 'ai',
-        senderName: 'NovaBot AI',
+        senderName: 'Tư Vấn Viên',
         message: aiResponse.reply,
         suggestedProducts: aiResponse.suggestedProducts
       });

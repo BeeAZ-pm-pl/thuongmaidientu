@@ -37,7 +37,7 @@ const getMyOrders = async (req, res) => {
 
 const createOrder = async (req, res) => {
   try {
-    const { customerName, customerPhone, shippingAddress, items, paymentMethod, userId } = req.body;
+    const { customerName, customerPhone, shippingAddress, items, paymentMethod, userId, voucherCode } = req.body;
     if (!customerName || !customerPhone || !shippingAddress || !items || items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -51,7 +51,8 @@ const createOrder = async (req, res) => {
       customerPhone,
       shippingAddress,
       paymentMethod,
-      items
+      items,
+      voucherCode
     });
 
     return res.status(201).json({
@@ -89,6 +90,44 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const updateOrder = async (req, res) => {
+  try {
+    const updated = await orderModel.updateOrder(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng để cập nhật' });
+    }
+    return res.json({
+      success: true,
+      message: 'Cập nhật đơn hàng thành công',
+      data: updated
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const getVouchers = async (req, res) => {
+  try {
+    const vouchers = await orderModel.getAvailableVouchers();
+    return res.json({ success: true, data: vouchers });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách voucher', error: error.message });
+  }
+};
+
+const applyVoucher = async (req, res) => {
+  try {
+    const { code, orderTotal } = req.body;
+    const result = await orderModel.validateVoucher(code, orderTotal);
+    if (!result.valid) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+    return res.json({ success: true, message: 'Áp dụng mã giảm giá thành công', data: result });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const getStats = async (req, res) => {
   try {
     const stats = await orderModel.getStats();
@@ -104,5 +143,8 @@ module.exports = {
   getMyOrders,
   createOrder,
   updateOrderStatus,
+  updateOrder,
+  getVouchers,
+  applyVoucher,
   getStats
 };

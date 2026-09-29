@@ -388,7 +388,7 @@ const renderAdminDashboardView = () => {
   </div>
 
   <div id="productModal" class="modal-overlay">
-    <div class="modal-card">
+    <div class="modal-card modal-card-lg">
       <button class="modal-close-btn" data-close-modal="productModal" type="button">
         <i class="ri-close-line"></i>
       </button>
@@ -434,7 +434,19 @@ const renderAdminDashboardView = () => {
             <label class="form-label" for="prodDescInput">Mô tả sản phẩm</label>
             <textarea id="prodDescInput" class="form-textarea" rows="3"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 12px;">
+
+          <div class="variant-manager-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" style="margin-bottom: 0; font-weight: 700;">Biến thể / Phân loại hàng</label>
+              <button type="button" id="addVariantRowBtn" class="btn btn-outline btn-sm">+ Thêm biến thể</button>
+            </div>
+            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 12px;">
+              Quản lý chi tiết từng phiên bản của sản phẩm (màu sắc, phân loại, giá bán riêng, kho riêng).
+            </div>
+            <div id="productVariantsContainer"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 16px;">
             <span id="saveProductBtnText">Lưu Sản Phẩm</span>
           </button>
         </form>
@@ -443,12 +455,12 @@ const renderAdminDashboardView = () => {
   </div>
 
   <div id="orderDetailModal" class="modal-overlay">
-    <div class="modal-card modal-card-lg">
+    <div class="modal-card modal-card-xl">
       <button class="modal-close-btn" data-close-modal="orderDetailModal" type="button">
         <i class="ri-close-line"></i>
       </button>
       <div class="modal-header">
-        <h3 class="modal-title" id="orderDetailTitle">Chi Tiết Đơn Hàng</h3>
+        <h3 class="modal-title" id="orderDetailTitle">Quản Lý & Chỉnh Sửa Đơn Hàng</h3>
       </div>
       <div class="modal-body" id="orderDetailContent"></div>
     </div>
@@ -612,6 +624,76 @@ const bindModals = () => {
         });
     });
 };
+let currentProductVariants = [];
+const renderProductVariantsEditor = (variants = []) => {
+    const container = document.getElementById('productVariantsContainer');
+    if (!container)
+        return;
+    currentProductVariants = Array.isArray(variants) ? [...variants] : [];
+    if (currentProductVariants.length === 0) {
+        container.innerHTML = `
+      <div style="text-align: center; padding: 14px; color: var(--text-muted); font-size: 0.8125rem; background: #fff; border-radius: 6px; border: 1px dashed #cbd5e1;">
+        Chưa có biến thể nào. Sản phẩm sẽ dùng thông tin chung hoặc nhấn "+ Thêm biến thể" để tạo phân loại riêng.
+      </div>
+    `;
+        return;
+    }
+    container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: grid; grid-template-columns: 1.2fr 1.2fr 1fr 1fr auto; gap: 8px; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); padding: 0 4px;">
+        <div>Màu sắc</div>
+        <div>Phân loại / Loại</div>
+        <div>Giá bán (VND)</div>
+        <div>Tồn kho</div>
+        <div></div>
+      </div>
+      ${currentProductVariants.map((v, idx) => `
+        <div class="variant-row" data-index="${idx}">
+          <input type="text" class="form-input form-input-sm var-color-input" value="${v.color || ''}" placeholder="Màu sắc (vd: Đen)" required>
+          <input type="text" class="form-input form-input-sm var-type-input" value="${v.type || ''}" placeholder="Loại (vd: 128GB)" required>
+          <input type="number" class="form-input form-input-sm var-price-input" value="${v.price || 0}" min="0" placeholder="Giá" required>
+          <input type="number" class="form-input form-input-sm var-stock-input" value="${v.stock !== undefined ? v.stock : 100}" min="0" placeholder="Kho" required>
+          <button type="button" class="btn btn-outline btn-sm delete-variant-btn" data-index="${idx}" style="color: #ef4444; border-color: #fecdd3; padding: 4px 8px;" title="Xóa biến thể">
+            <i class="ri-delete-bin-line"></i>
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+    container.querySelectorAll('.delete-variant-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+            if (idx >= 0) {
+                currentProductVariants.splice(idx, 1);
+                renderProductVariantsEditor(currentProductVariants);
+            }
+        });
+    });
+    container.querySelectorAll('.var-color-input').forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            if (currentProductVariants[idx])
+                currentProductVariants[idx].color = e.target.value;
+        });
+    });
+    container.querySelectorAll('.var-type-input').forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            if (currentProductVariants[idx])
+                currentProductVariants[idx].type = e.target.value;
+        });
+    });
+    container.querySelectorAll('.var-price-input').forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            if (currentProductVariants[idx])
+                currentProductVariants[idx].price = Number(e.target.value) || 0;
+        });
+    });
+    container.querySelectorAll('.var-stock-input').forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            if (currentProductVariants[idx])
+                currentProductVariants[idx].stock = Number(e.target.value) || 0;
+        });
+    });
+};
 const resetProductForm = () => {
     const editId = document.getElementById('editProductId');
     const nameInput = document.getElementById('prodNameInput');
@@ -643,9 +725,26 @@ const resetProductForm = () => {
         title.textContent = 'Thêm Sản Phẩm Mới';
     if (btnText)
         btnText.textContent = 'Lưu Sản Phẩm';
+    renderProductVariantsEditor([]);
 };
 const bindProductForm = () => {
     const form = document.getElementById('productForm');
+    const addVarBtn = document.getElementById('addVariantRowBtn');
+    if (addVarBtn) {
+        addVarBtn.addEventListener('click', () => {
+            const defaultPrice = parseFloat(document.getElementById('prodPriceInput')?.value || '0');
+            const defaultStock = parseInt(document.getElementById('prodStockInput')?.value || '50', 10);
+            currentProductVariants.push({
+                id: `temp_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                color: 'Mặc định',
+                type: 'Tiêu chuẩn',
+                price: defaultPrice > 0 ? defaultPrice : 100000,
+                originalPrice: defaultPrice > 0 ? defaultPrice : 100000,
+                stock: defaultStock > 0 ? defaultStock : 50
+            });
+            renderProductVariantsEditor(currentProductVariants);
+        });
+    }
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -668,6 +767,9 @@ const bindProductForm = () => {
                 imageUrl,
                 description
             };
+            if (currentProductVariants.length > 0) {
+                payload.variants = currentProductVariants;
+            }
             const url = editId ? `${API_BASE}/api/products/${editId}` : `${API_BASE}/api/products`;
             const method = editId ? 'PUT' : 'POST';
             try {
@@ -756,13 +858,16 @@ const renderOrders = () => {
         <td style="font-weight: 700;">#${o.id}</td>
         <td>${o.customerName}</td>
         <td>${o.customerPhone}</td>
-        <td style="font-weight: 700; color: var(--text-main);">${formatPrice(o.totalAmount)}</td>
+        <td style="font-weight: 700; color: var(--text-main);">
+          ${formatPrice(o.totalAmount)}
+          ${o.voucherCode ? `<div style="font-size: 0.72rem; color: #16a34a; font-weight: 600; margin-top: 2px;"><i class="ri-coupon-3-line"></i> ${o.voucherCode} (-${formatPrice(o.discountAmount || 0)})</div>` : ''}
+        </td>
         <td><span class="pay-badge">${o.paymentMethod.toUpperCase()}</span></td>
         <td><span class="order-status-badge ${s.class}">${s.label}</span></td>
         <td style="font-size: 0.8125rem; color: var(--text-muted);">${formatDate(o.createdAt)}</td>
         <td>
           <div style="display: flex; gap: 6px;">
-            <button class="btn btn-outline btn-sm view-order-btn" data-id="${o.id}" type="button">Chi tiết</button>
+            <button class="btn btn-outline btn-sm view-order-btn" data-id="${o.id}" type="button"><i class="ri-edit-line"></i> Chi tiết & Sửa</button>
             <select class="form-select form-select-sm change-order-status-select" data-id="${o.id}">
               <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>Chờ</option>
               <option value="processing" ${o.status === 'processing' ? 'selected' : ''}>Đang giao</option>
@@ -813,45 +918,396 @@ const showOrderDetail = (order) => {
     const content = document.getElementById('orderDetailContent');
     if (!modal || !title || !content)
         return;
-    title.textContent = `Chi Tiết Đơn Hàng #${order.id}`;
-    const items = Array.isArray(order.items) ? order.items : [];
-    content.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-      <div style="background: #f8fafc; padding: 16px; border-radius: var(--radius-md);">
-        <div style="font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Thông Tin Người Nhận</div>
-        <div style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.6;">
-          <div>Họ và tên: <strong>${order.customerName}</strong></div>
-          <div>Điện thoại: <strong>${order.customerPhone}</strong></div>
-          <div>Địa chỉ giao: <strong>${order.shippingAddress}</strong></div>
-        </div>
-      </div>
-      <div style="background: #f8fafc; padding: 16px; border-radius: var(--radius-md);">
-        <div style="font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Thông Tin Thanh Toán</div>
-        <div style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.6;">
-          <div>Hình thức: <strong>${order.paymentMethod.toUpperCase()}</strong></div>
-          <div>Ngày đặt: <strong>${formatDate(order.createdAt)}</strong></div>
-          <div>Tổng thanh toán: <strong style="color: var(--primary); font-size: 1rem;">${formatPrice(order.totalAmount)}</strong></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="font-weight: 700; margin-bottom: 10px; color: var(--text-main);">Danh Sách Sản Phẩm Đã Mua</div>
-    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto;">
-      ${items.map(it => `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-light);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="${it.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80'}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">
+    title.textContent = `Quản Lý & Chỉnh Sửa Đơn Hàng #${order.id}`;
+    let currentItems = Array.isArray(order.items)
+        ? JSON.parse(JSON.stringify(order.items))
+        : [];
+    let filterItemIndex = -1;
+    const renderModalContent = () => {
+        const totalAmount = currentItems.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+        const voucherDiscount = Number(order.discountAmount) || 0;
+        const finalAmount = Math.max(0, totalAmount - voucherDiscount);
+        const displayedItems = filterItemIndex >= 0 && filterItemIndex < currentItems.length
+            ? [currentItems[filterItemIndex]]
+            : currentItems;
+        content.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <!-- Card 1: Thông tin người nhận -->
+        <div class="order-edit-section" style="margin-bottom: 0;">
+          <div class="order-edit-title">
+            <span><i class="ri-user-location-line"></i> Thông Tin Người Nhận</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
             <div>
-              <div style="font-weight: 600; font-size: 0.875rem;">${it.name}</div>
-              ${it.variantName ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Phân loại: ${it.variantName}</div>` : ''}
-              <div style="font-size: 0.8125rem; color: var(--text-muted);">${formatPrice(it.price)} x ${it.quantity}</div>
+              <label class="form-label" style="font-size: 0.8125rem;">Họ và tên</label>
+              <input type="text" id="editCustomerName" class="form-input form-input-sm" value="${order.customerName || ''}" required>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8125rem;">Số điện thoại</label>
+              <input type="text" id="editCustomerPhone" class="form-input form-input-sm" value="${order.customerPhone || ''}" required>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8125rem;">Địa chỉ giao hàng</label>
+              <input type="text" id="editShippingAddress" class="form-input form-input-sm" value="${order.shippingAddress || ''}" required>
             </div>
           </div>
-          <div style="font-weight: 700;">${formatPrice(it.price * it.quantity)}</div>
         </div>
-      `).join('')}
-    </div>
-  `;
+
+        <!-- Card 2: Trạng thái & Thanh toán -->
+        <div class="order-edit-section" style="margin-bottom: 0;">
+          <div class="order-edit-title">
+            <span><i class="ri-bank-card-line"></i> Trạng Thái & Thanh Toán</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Ngày đặt: ${formatDate(order.createdAt)}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+              <label class="form-label" style="font-size: 0.8125rem;">Trạng thái đơn hàng</label>
+              <select id="editStatusSelect" class="form-select form-select-sm">
+                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xử lý</option>
+                <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Đang giao hàng</option>
+                <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
+                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8125rem;">Phương thức thanh toán</label>
+              <select id="editPaymentMethodSelect" class="form-select form-select-sm">
+                <option value="cod" ${order.paymentMethod === 'cod' ? 'selected' : ''}>Thanh toán khi nhận hàng (COD)</option>
+                <option value="banking" ${order.paymentMethod === 'banking' ? 'selected' : ''}>Chuyển khoản ngân hàng</option>
+                <option value="vnpay" ${order.paymentMethod === 'vnpay' ? 'selected' : ''}>Cổng thanh toán VNPAY</option>
+                <option value="momo" ${order.paymentMethod === 'momo' ? 'selected' : ''}>Ví điện tử MoMo</option>
+              </select>
+            </div>
+            <div style="background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-light); margin-top: 4px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 2px;">
+                <span>Tiền hàng:</span>
+                <span>${formatPrice(totalAmount)}</span>
+              </div>
+              ${order.voucherCode ? `
+                <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; color: #16a34a; font-weight: 600; margin-bottom: 2px;">
+                  <span><i class="ri-coupon-3-line"></i> Mã voucher (${order.voucherCode}):</span>
+                  <span>-${formatPrice(voucherDiscount)}</span>
+                </div>
+              ` : ''}
+              <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; color: var(--text-muted); padding-top: 4px; border-top: 1px dashed var(--border-light); align-items: baseline;">
+                <span style="font-weight: 700;">Tổng thanh toán:</span>
+                <span id="editOrderTotalBadge" style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">${formatPrice(finalAmount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Chỉnh sửa các món trong đơn hàng -->
+      <div class="order-edit-section">
+        <div class="order-edit-title">
+          <span><i class="ri-shopping-bag-3-line"></i> Danh Sách Món Trong Đơn (${currentItems.length} món)</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0;">Lọc/Chọn món:</label>
+            <select id="orderItemFilterDropdown" class="form-select form-select-sm" style="width: auto; min-width: 180px;">
+              <option value="-1" ${filterItemIndex === -1 ? 'selected' : ''}>Tất cả các món (${currentItems.length})</option>
+              ${currentItems.map((it, idx) => `
+                <option value="${idx}" ${filterItemIndex === idx ? 'selected' : ''}>Món ${idx + 1}: ${it.name} ${it.variantName ? '(' + it.variantName + ')' : ''}</option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="order-items-list" id="orderItemsEditList">
+          ${displayedItems.length === 0 ? `
+            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.875rem;">
+              Đơn hàng chưa có món nào. Vui lòng thêm sản phẩm vào đơn hàng bên dưới.
+            </div>
+          ` : displayedItems.map((it) => {
+            const realIdx = filterItemIndex >= 0 ? filterItemIndex : currentItems.indexOf(it);
+            const matchedProd = state.products.find(p => String(p.id) === String(it.productId) || p.name === it.name);
+            const prodVariants = matchedProd && Array.isArray(matchedProd.variants) ? matchedProd.variants : [];
+            return `
+              <div class="order-item-edit-card ${filterItemIndex === realIdx ? 'highlighted' : ''}" data-index="${realIdx}">
+                <img src="${it.imageUrl || (matchedProd ? matchedProd.imageUrl : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80')}" class="order-item-thumb">
+                <div class="order-item-details">
+                  <div class="order-item-name" title="${it.name}">#${realIdx + 1}. ${it.name}</div>
+                  <div class="order-item-variant-row">
+                    ${prodVariants.length > 0 ? `
+                      <span style="font-size: 0.75rem; color: var(--text-muted);">Phân loại:</span>
+                      <select class="order-item-variant-select" data-index="${realIdx}">
+                        ${prodVariants.map(v => {
+                const vName = `${v.color} - ${v.type}`;
+                const isSel = (it.variantId && String(v.id) === String(it.variantId)) || it.variantName === vName;
+                return `<option value="${v.id}" data-price="${v.price}" data-name="${vName}" ${isSel ? 'selected' : ''}>${vName} (${formatPrice(v.price)})</option>`;
+            }).join('')}
+                      </select>
+                    ` : `
+                      <span style="font-size: 0.75rem; color: var(--text-muted);">Phân loại:</span>
+                      <input type="text" class="form-input form-input-sm order-item-custom-variant" data-index="${realIdx}" value="${it.variantName || 'Tiêu chuẩn'}" style="width: 130px; padding: 2px 6px; font-size: 0.75rem;">
+                    `}
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Số lượng:</span>
+                  <div class="order-item-qty-wrap">
+                    <button type="button" class="order-item-qty-btn dec-btn" data-index="${realIdx}">-</button>
+                    <input type="number" min="1" class="order-item-qty-input" data-index="${realIdx}" value="${it.quantity}">
+                    <button type="button" class="order-item-qty-btn inc-btn" data-index="${realIdx}">+</button>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Đơn giá:</span>
+                  <input type="number" min="0" class="form-input form-input-sm order-item-price-input" data-index="${realIdx}" value="${it.price}" style="width: 100px; padding: 4px 6px;">
+                </div>
+                <div class="order-item-price-wrap">
+                  <div class="order-item-subtotal">${formatPrice(it.price * it.quantity)}</div>
+                  <div class="order-item-unitprice">${formatPrice(it.price)}/món</div>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm delete-order-item-btn" data-index="${realIdx}" style="color: #ef4444; border-color: #fecdd3; padding: 6px 10px;" title="Xóa món này">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            `;
+        }).join('')}
+        </div>
+
+        <!-- Box thêm món mới vào đơn -->
+        <div class="order-add-item-card">
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 2px;">Thêm sản phẩm:</label>
+            <select id="addOrderItemProductSelect" class="form-select form-select-sm">
+              <option value="">-- Chọn sản phẩm thêm vào đơn --</option>
+              ${state.products.map(p => `
+                <option value="${p.id}">${p.name} - ${formatPrice(p.price)}</option>
+              `).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 2px;">Phân loại (Biến thể):</label>
+            <select id="addOrderItemVariantSelect" class="form-select form-select-sm" disabled>
+              <option value="">-- Chọn biến thể --</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 2px;">Số lượng:</label>
+            <input type="number" id="addOrderItemQtyInput" min="1" value="1" class="form-input form-input-sm">
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; display: block; margin-bottom: 2px; visibility: hidden;">Thao tác</label>
+            <button type="button" id="addOrderItemBtn" class="btn btn-outline btn-sm" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
+              <i class="ri-add-line"></i> Thêm món
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+        <button type="button" class="btn btn-outline btn-md" data-close-modal="orderDetailModal">Hủy bỏ</button>
+        <button type="button" id="saveOrderChangesBtn" class="btn btn-primary btn-md">
+          <i class="ri-save-3-line"></i> Lưu Thay Đổi Đơn Hàng
+        </button>
+      </div>
+    `;
+        bindModalEvents();
+    };
+    const bindModalEvents = () => {
+        const filterSelect = document.getElementById('orderItemFilterDropdown');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', () => {
+                filterItemIndex = parseInt(filterSelect.value, 10);
+                renderModalContent();
+            });
+        }
+        content.querySelectorAll('.order-item-variant-select').forEach((sel) => {
+            sel.addEventListener('change', () => {
+                const idx = parseInt(sel.getAttribute('data-index') || '-1', 10);
+                const selOption = sel.selectedOptions[0];
+                if (idx >= 0 && selOption) {
+                    const varId = selOption.value;
+                    const varPrice = parseFloat(selOption.getAttribute('data-price') || '0');
+                    const varName = selOption.getAttribute('data-name') || '';
+                    currentItems[idx].variantId = varId;
+                    currentItems[idx].variantName = varName;
+                    if (varPrice > 0)
+                        currentItems[idx].price = varPrice;
+                    renderModalContent();
+                }
+            });
+        });
+        content.querySelectorAll('.order-item-custom-variant').forEach((inp) => {
+            inp.addEventListener('change', () => {
+                const idx = parseInt(inp.getAttribute('data-index') || '-1', 10);
+                if (idx >= 0) {
+                    currentItems[idx].variantName = inp.value.trim();
+                }
+            });
+        });
+        content.querySelectorAll('.dec-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+                if (idx >= 0 && currentItems[idx].quantity > 1) {
+                    currentItems[idx].quantity -= 1;
+                    renderModalContent();
+                }
+            });
+        });
+        content.querySelectorAll('.inc-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+                if (idx >= 0) {
+                    currentItems[idx].quantity += 1;
+                    renderModalContent();
+                }
+            });
+        });
+        content.querySelectorAll('.order-item-qty-input').forEach((inp) => {
+            inp.addEventListener('change', () => {
+                const idx = parseInt(inp.getAttribute('data-index') || '-1', 10);
+                const val = parseInt(inp.value || '1', 10);
+                if (idx >= 0) {
+                    currentItems[idx].quantity = val > 0 ? val : 1;
+                    renderModalContent();
+                }
+            });
+        });
+        content.querySelectorAll('.order-item-price-input').forEach((inp) => {
+            inp.addEventListener('change', () => {
+                const idx = parseInt(inp.getAttribute('data-index') || '-1', 10);
+                const val = parseFloat(inp.value || '0');
+                if (idx >= 0) {
+                    currentItems[idx].price = val >= 0 ? val : 0;
+                    renderModalContent();
+                }
+            });
+        });
+        content.querySelectorAll('.delete-order-item-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+                if (idx >= 0) {
+                    if (currentItems.length <= 1) {
+                        showToast('Cảnh báo', 'Đơn hàng phải có ít nhất 1 sản phẩm', 'warning');
+                        return;
+                    }
+                    currentItems.splice(idx, 1);
+                    filterItemIndex = -1;
+                    renderModalContent();
+                }
+            });
+        });
+        const addProdSelect = document.getElementById('addOrderItemProductSelect');
+        const addVarSelect = document.getElementById('addOrderItemVariantSelect');
+        const addQtyInput = document.getElementById('addOrderItemQtyInput');
+        const addBtn = document.getElementById('addOrderItemBtn');
+        if (addProdSelect && addVarSelect) {
+            addProdSelect.addEventListener('change', () => {
+                const pId = addProdSelect.value;
+                const matched = state.products.find(p => String(p.id) === pId);
+                if (matched && Array.isArray(matched.variants) && matched.variants.length > 0) {
+                    addVarSelect.disabled = false;
+                    addVarSelect.innerHTML = matched.variants.map(v => `
+            <option value="${v.id}" data-price="${v.price}" data-name="${v.color} - ${v.type}">${v.color} - ${v.type} (${formatPrice(v.price)})</option>
+          `).join('');
+                }
+                else {
+                    addVarSelect.disabled = true;
+                    addVarSelect.innerHTML = `<option value="">-- Mặc định --</option>`;
+                }
+            });
+        }
+        if (addBtn && addProdSelect && addVarSelect && addQtyInput) {
+            addBtn.addEventListener('click', () => {
+                const pId = addProdSelect.value;
+                if (!pId) {
+                    showToast('Thông báo', 'Vui lòng chọn sản phẩm cần thêm', 'warning');
+                    return;
+                }
+                const matched = state.products.find(p => String(p.id) === pId);
+                if (!matched)
+                    return;
+                const qty = parseInt(addQtyInput.value || '1', 10);
+                const selOption = addVarSelect.selectedOptions[0];
+                let varId = '';
+                let varName = '';
+                let price = matched.price;
+                if (selOption && !addVarSelect.disabled) {
+                    varId = selOption.value;
+                    varName = selOption.getAttribute('data-name') || '';
+                    const p = parseFloat(selOption.getAttribute('data-price') || '0');
+                    if (p > 0)
+                        price = p;
+                }
+                currentItems.push({
+                    productId: matched.id,
+                    variantId: varId || undefined,
+                    name: matched.name,
+                    variantName: varName || 'Tiêu chuẩn',
+                    price,
+                    quantity: qty > 0 ? qty : 1,
+                    imageUrl: matched.imageUrl
+                });
+                filterItemIndex = -1;
+                showToast('Thành công', `Đã thêm món "${matched.name}" vào đơn`, 'success');
+                renderModalContent();
+            });
+        }
+        content.querySelectorAll('[data-close-modal="orderDetailModal"]').forEach((b) => {
+            b.addEventListener('click', () => {
+                modal.classList.remove('active');
+            });
+        });
+        const saveBtn = document.getElementById('saveOrderChangesBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const customerName = document.getElementById('editCustomerName')?.value.trim() || '';
+                const customerPhone = document.getElementById('editCustomerPhone')?.value.trim() || '';
+                const shippingAddress = document.getElementById('editShippingAddress')?.value.trim() || '';
+                const status = document.getElementById('editStatusSelect')?.value || order.status;
+                const paymentMethod = document.getElementById('editPaymentMethodSelect')?.value || order.paymentMethod;
+                if (!customerName || !customerPhone || !shippingAddress) {
+                    showToast('Lỗi', 'Vui lòng điền đầy đủ họ tên, điện thoại và địa chỉ giao hàng', 'error');
+                    return;
+                }
+                if (currentItems.length === 0) {
+                    showToast('Lỗi', 'Đơn hàng phải có ít nhất một món', 'error');
+                    return;
+                }
+                saveBtn.setAttribute('disabled', 'true');
+                saveBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang lưu...`;
+                try {
+                    const res = await fetch(`${API_BASE}/api/orders/${order.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${state.token}`
+                        },
+                        body: JSON.stringify({
+                            customerName,
+                            customerPhone,
+                            shippingAddress,
+                            paymentMethod,
+                            status,
+                            voucherCode: order.voucherCode,
+                            discountAmount: order.discountAmount,
+                            items: currentItems
+                        })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        showToast('Thành công', 'Đã lưu toàn bộ thay đổi đơn hàng', 'success');
+                        modal.classList.remove('active');
+                        loadOrders();
+                    }
+                    else {
+                        showToast('Lỗi', result.message || 'Không thể lưu đơn hàng', 'error');
+                        saveBtn.removeAttribute('disabled');
+                        saveBtn.innerHTML = `<i class="ri-save-3-line"></i> Lưu Thay Đổi Đơn Hàng`;
+                    }
+                }
+                catch {
+                    showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
+                    saveBtn.removeAttribute('disabled');
+                    saveBtn.innerHTML = `<i class="ri-save-3-line"></i> Lưu Thay Đổi Đơn Hàng`;
+                }
+            });
+        }
+    };
+    renderModalContent();
     modal.classList.add('active');
 };
 const loadProducts = async () => {
@@ -960,6 +1416,7 @@ const openEditProductModal = (p) => {
         title.textContent = 'Chỉnh Sửa Sản Phẩm';
     if (btnText)
         btnText.textContent = 'Cập Nhật Sản Phẩm';
+    renderProductVariantsEditor(p.variants || []);
     if (modal)
         modal.classList.add('active');
 };

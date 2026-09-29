@@ -91,6 +91,25 @@
   color: var(--warning);
 }
 
+.status-cancelled {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.order-voucher-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #a7f3d0;
+  margin-top: 4px;
+}
+
 .order-items-list {
   padding: 16px 20px;
 }

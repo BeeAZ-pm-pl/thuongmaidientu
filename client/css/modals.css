@@ -285,29 +285,29 @@
   border-top: 1px dashed var(--border-light);
 }
 
-.modal-card-shopee {
+.modal-card-novamall {
   max-width: 980px;
   border-radius: var(--radius-xl);
   background: #ffffff;
 }
 
-.modal-body-shopee {
+.modal-body-novamall {
   padding: 28px;
 }
 
-.shopee-main-grid {
+.novamall-main-grid {
   display: grid;
   grid-template-columns: 380px 1fr;
   gap: 32px;
 }
 
-.shopee-gallery {
+.novamall-gallery {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.shopee-main-image-wrap {
+.novamall-main-image-wrap {
   position: relative;
   width: 100%;
   height: 380px;
@@ -317,21 +317,21 @@
   border: 1px solid var(--border-light);
 }
 
-.shopee-main-image {
+.novamall-main-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform var(--transition-normal);
 }
 
-.shopee-thumbnails {
+.novamall-thumbnails {
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding: 4px 0;
 }
 
-.shopee-thumb-item {
+.novamall-thumb-item {
   width: 68px;
   height: 68px;
   border-radius: var(--radius-md);
@@ -342,12 +342,12 @@
   transition: all var(--transition-fast);
 }
 
-.shopee-thumb-item:hover,
-.shopee-thumb-item.active {
+.novamall-thumb-item:hover,
+.novamall-thumb-item.active {
   border-color: #ee4d2d;
 }
 
-.shopee-commitments {
+.novamall-commitments {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -355,7 +355,7 @@
   border-top: 1px solid #f1f5f9;
 }
 
-.shopee-commit-item {
+.novamall-commit-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -363,24 +363,24 @@
   color: var(--text-muted);
 }
 
-.shopee-commit-item i {
+.novamall-commit-item i {
   color: #ee4d2d;
   font-size: 1.1rem;
 }
 
-.shopee-info-col {
+.novamall-info-col {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.shopee-title-area {
+.novamall-title-area {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.shopee-mall-tag {
+.novamall-mall-tag {
   background: #ee4d2d;
   color: #ffffff;
   font-size: 0.75rem;
@@ -393,14 +393,14 @@
   margin-top: 3px;
 }
 
-.shopee-product-title {
+.novamall-product-title {
   font-size: 1.35rem;
   font-weight: 800;
   color: var(--text-main);
   line-height: 1.35;
 }
 
-.shopee-rating-strip {
+.novamall-rating-strip {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -409,7 +409,7 @@
   padding-bottom: 6px;
 }
 
-.shopee-rating-val {
+.novamall-rating-val {
   color: #ee4d2d;
   font-weight: 800;
   text-decoration: underline;
@@ -418,18 +418,18 @@
   gap: 4px;
 }
 
-.shopee-rating-stars {
+.novamall-rating-stars {
   color: #facc15;
   font-size: 0.9375rem;
 }
 
-.shopee-meta-divider {
+.novamall-meta-divider {
   width: 1px;
   height: 14px;
   background: var(--border-light);
 }
 
-.shopee-price-box {
+.novamall-price-box {
   background: #fafafa;
   padding: 18px 20px;
   border-radius: var(--radius-md);
@@ -440,7 +440,7 @@
   border: 1px solid #f1f5f9;
 }
 
-.shopee-flash-banner {
+.novamall-flash-banner {
   width: 100%;
   background: linear-gradient(90deg, #ee4d2d 0%, #ff7337 100%);
   color: #ffffff;
@@ -454,19 +454,19 @@
   font-size: 0.875rem;
 }
 
-.shopee-price-original {
+.novamall-price-original {
   font-size: 1rem;
   color: #929292;
   text-decoration: line-through;
 }
 
-.shopee-price-current {
+.novamall-price-current {
   font-size: 2rem;
   font-weight: 800;
   color: #ee4d2d;
 }
 
-.shopee-price-discount {
+.novamall-price-discount {
   background: rgba(238, 77, 45, 0.12);
   color: #ee4d2d;
   font-size: 0.75rem;
@@ -476,7 +476,7 @@
   text-transform: uppercase;
 }
 
-.shopee-shipping-strip {
+.novamall-shipping-strip {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -493,7 +493,7 @@
   font-weight: 700;
 }
 
-.shopee-variant-group {
+.novamall-variant-group {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -502,13 +502,13 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
-.shopee-variant-row {
+.novamall-variant-row {
   display: flex;
   align-items: flex-start;
   gap: 16px;
 }
 
-.shopee-variant-label {
+.novamall-variant-label {
   width: 90px;
   font-size: 0.875rem;
   color: #757575;
@@ -516,14 +516,14 @@
   flex-shrink: 0;
 }
 
-.shopee-variant-options {
+.novamall-variant-options {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   flex: 1;
 }
 
-.shopee-option-btn {
+.novamall-option-btn {
   position: relative;
   min-width: 80px;
   padding: 8px 16px;
@@ -541,7 +541,7 @@
   gap: 8px;
 }
 
-.shopee-option-btn-thumb {
+.novamall-option-btn-thumb {
   width: 24px;
   height: 24px;
   border-radius: 2px;
@@ -549,18 +549,18 @@
   border: 1px solid var(--border-light);
 }
 
-.shopee-option-btn:hover {
+.novamall-option-btn:hover {
   border-color: #ee4d2d;
   color: #ee4d2d;
 }
 
-.shopee-option-btn.active {
+.novamall-option-btn.active {
   border-color: #ee4d2d;
   color: #ee4d2d;
   background: #fffcfb;
 }
 
-.shopee-option-btn.active::after {
+.novamall-option-btn.active::after {
   content: '✓';
   position: absolute;
   bottom: 0;
@@ -575,21 +575,21 @@
   border-radius: 4px 0 3px 0;
 }
 
-.shopee-option-btn.disabled {
+.novamall-option-btn.disabled {
   opacity: 0.45;
   cursor: not-allowed;
   border-style: dashed;
   background: #f8fafc;
 }
 
-.shopee-quantity-row {
+.novamall-quantity-row {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 8px 0;
 }
 
-.shopee-qty-wrapper {
+.novamall-qty-wrapper {
   display: flex;
   align-items: center;
   border: 1px solid rgba(0, 0, 0, 0.15);
@@ -597,7 +597,7 @@
   overflow: hidden;
 }
 
-.shopee-qty-btn {
+.novamall-qty-btn {
   width: 34px;
   height: 34px;
   display: flex;
@@ -612,11 +612,11 @@
   transition: background var(--transition-fast);
 }
 
-.shopee-qty-btn:hover {
+.novamall-qty-btn:hover {
   background: #f1f5f9;
 }
 
-.shopee-qty-input {
+.novamall-qty-input {
   width: 52px;
   height: 34px;
   border: none;
@@ -628,19 +628,19 @@
   color: var(--text-main);
 }
 
-.shopee-stock-text {
+.novamall-stock-text {
   font-size: 0.8125rem;
   color: #757575;
 }
 
-.shopee-actions-row {
+.novamall-actions-row {
   display: flex;
   align-items: center;
   gap: 14px;
   margin-top: 10px;
 }
 
-.shopee-btn-add-cart {
+.novamall-btn-add-cart {
   flex: 1;
   height: 48px;
   border-radius: var(--radius-sm);
@@ -657,11 +657,11 @@
   transition: all var(--transition-fast);
 }
 
-.shopee-btn-add-cart:hover {
+.novamall-btn-add-cart:hover {
   background: #ffe6e0;
 }
 
-.shopee-btn-buy-now {
+.novamall-btn-buy-now {
   flex: 1.2;
   height: 48px;
   border-radius: var(--radius-sm);
@@ -679,18 +679,18 @@
   box-shadow: 0 4px 14px rgba(238, 77, 45, 0.35);
 }
 
-.shopee-btn-buy-now:hover {
+.novamall-btn-buy-now:hover {
   opacity: 0.92;
   transform: translateY(-1px);
 }
 
-.shopee-detail-tabs {
+.novamall-detail-tabs {
   margin-top: 28px;
   border-top: 1px solid var(--border-light);
   padding-top: 24px;
 }
 
-.shopee-section-heading {
+.novamall-section-heading {
   font-size: 1.125rem;
   font-weight: 800;
   color: var(--text-main);
@@ -700,7 +700,7 @@
   gap: 8px;
 }
 
-.shopee-specs-table {
+.novamall-specs-table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 24px;
@@ -709,41 +709,41 @@
   overflow: hidden;
 }
 
-.shopee-specs-table td {
+.novamall-specs-table td {
   padding: 12px 16px;
   font-size: 0.875rem;
   border-bottom: 1px solid #f1f5f9;
 }
 
-.shopee-specs-table td:first-child {
+.novamall-specs-table td:first-child {
   width: 160px;
   color: #757575;
   font-weight: 500;
 }
 
-.shopee-specs-table td:last-child {
+.novamall-specs-table td:last-child {
   color: var(--text-main);
   font-weight: 600;
 }
 
-.shopee-desc-content {
+.novamall-desc-content {
   font-size: 0.9375rem;
   line-height: 1.75;
   color: #475569;
 }
 
 @media (max-width: 860px) {
-  .shopee-main-grid {
+  .novamall-main-grid {
     grid-template-columns: 1fr;
   }
-  .shopee-main-image-wrap {
+  .novamall-main-image-wrap {
     height: 280px;
   }
-  .shopee-actions-row {
+  .novamall-actions-row {
     flex-direction: column;
   }
-  .shopee-btn-add-cart,
-  .shopee-btn-buy-now {
+  .novamall-btn-add-cart,
+  .novamall-btn-buy-now {
     width: 100%;
   }
 }

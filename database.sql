@@ -8,8 +8,12 @@ CREATE DATABASE IF NOT EXISTS `ecommerce_db` CHARACTER SET utf8mb4 COLLATE utf8m
 USE `ecommerce_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `chat_messages`;
+DROP TABLE IF EXISTS `chat_sessions`;
 DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `product_reviews`;
 DROP TABLE IF EXISTS `orders`;
+DROP TABLE IF EXISTS `vouchers`;
 DROP TABLE IF EXISTS `product_variants`;
 DROP TABLE IF EXISTS `products`;
 DROP TABLE IF EXISTS `categories`;
@@ -30,11 +34,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dữ liệu tài khoản mặc định (Mật khẩu tài khoản admin: 123456 hoặc admin)
+-- Dữ liệu tài khoản mẫu được quản lý toàn diện trong SQL (Mật khẩu tài khoản admin: admin hoặc 123456; Khách hàng: 123456)
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `phone`, `address`) VALUES
-('usr_admin_root', 'Quản Trị Viên Hệ Thống', 'admin', '$2a$10$wT8K8U1yJ5/XyE0U.q57CeM.rZq90zL3u21VbXk6Zt5r/6u31K3aW', 'admin', '0988888888', 'Hà Nội, Việt Nam'),
-('usr_admin_01', 'Admin Quản Lý Shop', 'admin@shop.com', '$2a$10$wT8K8U1yJ5/XyE0U.q57CeM.rZq90zL3u21VbXk6Zt5r/6u31K3aW', 'admin', '0988888888', 'Hà Nội, Việt Nam'),
-('usr_customer_01', 'Khách Hàng Mẫu', 'customer@shop.com', '$2a$10$wT8K8U1yJ5/XyE0U.q57CeM.rZq90zL3u21VbXk6Zt5r/6u31K3aW', 'customer', '0912345678', 'TP. Hồ Chí Minh, Việt Nam');
+('usr_admin_root', 'Quản Trị Viên Hệ Thống', 'admin', '$2b$10$WqI1RdgQu9OXqA7ZRvaQ.e/JMjAEzXTYvsjgvE5.Sd1M5M5wv80ja', 'admin', '0988888888', 'Hà Nội, Việt Nam'),
+('usr_admin_01', 'Admin Quản Lý Shop', 'admin@shop.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'admin', '0988888888', 'Hà Nội, Việt Nam'),
+('usr_customer_01', 'Khách Hàng Mẫu', 'customer@shop.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0912345678', '123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh'),
+('usr_customer_02', 'Nguyễn Hoàng Nam', 'hoangnam@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0905123456', '45 Lê Duẩn, Quận Hải Châu, Đà Nẵng'),
+('usr_customer_03', 'Trần Thị Mai', 'maitran@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0934567890', '78 Cầu Giấy, Hà Nội'),
+('usr_customer_04', 'Lê Quốc Hưng', 'quochung@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0987654321', '12 Hoàng Diệu, TP. Nha Trang');
 
 -- --------------------------------------------------------------------
 -- 2. BẢNG CATEGORIES (Product Service)
@@ -123,7 +130,32 @@ INSERT INTO `product_variants` (`id`, `productId`, `color`, `type`, `price`, `or
 ('var_08_2', 'prod_08', 'Bìa Cứng Giới Hạn', 'Trọn Bộ Sách + Ebook Bản Quyền', 590000, 750000, 15, 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=800&q=80');
 
 -- --------------------------------------------------------------------
--- 5. BẢNG ORDERS (Order Service)
+-- 5. BẢNG VOUCHERS (Order Service)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `vouchers` (
+  `code` VARCHAR(50) PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `discountType` ENUM('fixed', 'percent') NOT NULL DEFAULT 'fixed',
+  `discountValue` INT NOT NULL,
+  `minOrderValue` BIGINT NOT NULL DEFAULT 0,
+  `maxDiscount` BIGINT DEFAULT NULL,
+  `description` TEXT,
+  `usageLimit` INT DEFAULT 1000,
+  `usedCount` INT DEFAULT 0,
+  `isActive` BOOLEAN DEFAULT 1,
+  `expiresAt` DATETIME DEFAULT NULL,
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `vouchers` (`code`, `name`, `discountType`, `discountValue`, `minOrderValue`, `maxDiscount`, `description`, `usageLimit`, `usedCount`, `isActive`, `expiresAt`) VALUES
+('NOVASHOP50', 'Ưu đãi Khách hàng Thân thiết', 'fixed', 50000, 200000, 50000, 'Giảm ngay 50.000đ cho đơn hàng từ 200.000đ', 500, 12, 1, '2026-12-31 23:59:59'),
+('SALE10', 'Siêu Sale Siêu Tiết Kiệm', 'percent', 10, 300000, 100000, 'Giảm 10% (tối đa 100.000đ) cho đơn từ 300.000đ', 1000, 45, 1, '2026-12-31 23:59:59'),
+('FREESHIP', 'Miễn Phí Vận Chuyển', 'fixed', 30000, 150000, 30000, 'Giảm 30.000đ phí giao hàng cho đơn từ 150.000đ', 2000, 89, 1, '2026-12-31 23:59:59'),
+('VIP100', 'Đặc Quyền Thành Viên VIP', 'fixed', 100000, 500000, 100000, 'Giảm 100.000đ cho đơn hàng giá trị từ 500.000đ', 200, 8, 1, '2026-12-31 23:59:59'),
+('WELCOME', 'Quà Chào Mừng Khách Hàng Mới', 'fixed', 20000, 100000, 20000, 'Giảm 20.000đ cho đơn hàng từ 100.000đ', 5000, 34, 1, '2026-12-31 23:59:59');
+
+-- --------------------------------------------------------------------
+-- 6. BẢNG ORDERS (Order Service)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `orders` (
   `id` VARCHAR(64) PRIMARY KEY,
@@ -135,12 +167,51 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `items` JSON NOT NULL,
   `totalAmount` BIGINT NOT NULL,
   `status` VARCHAR(50) DEFAULT 'pending',
+  `voucherCode` VARCHAR(50) DEFAULT NULL,
+  `discountAmount` BIGINT DEFAULT 0,
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `updatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`voucherCode`) REFERENCES `vouchers`(`code`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO `orders` (`id`, `userId`, `customerName`, `customerPhone`, `shippingAddress`, `paymentMethod`, `items`, `totalAmount`, `status`, `voucherCode`, `discountAmount`, `createdAt`) VALUES
+('ord_1001', 'usr_customer_01', 'Khách Hàng Mẫu', '0912345678', '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 'cod', '[{"productId":"prod_01","variantId":"var_01_1","name":"Tai nghe Bluetooth Sony WH-1000XM5 Chống Ồn","variantName":"Đen Huyền Bí - Bản Tiêu Chuẩn","price":7490000,"quantity":1,"imageUrl":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"}]', 7390000, 'completed', 'VIP100', 100000, '2026-09-20 14:30:00'),
+('ord_1002', 'usr_customer_01', 'Khách Hàng Mẫu', '0912345678', '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 'banking', '[{"productId":"prod_02","variantId":"var_02_1","name":"Bàn phím cơ không dây Keychron Q1 Pro QMK/VIA","variantName":"Xám Carbon - Red Switch (Êm Ái)","price":4350000,"quantity":1,"imageUrl":"https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80"}]', 4300000, 'processing', 'NOVASHOP50', 50000, '2026-09-25 09:15:00'),
+('ord_1003', 'guest', 'Trần Văn Hùng', '0938112233', '45 Hoàng Hoa Thám, Quận Ba Đình, Hà Nội', 'cod', '[{"productId":"prod_04","variantId":"var_04_1","name":"Áo khoác Bomber phong cách Minimalist Urban","variantName":"Đen Huyền Bí - Size M (50-65kg)","price":890000,"quantity":2,"imageUrl":"https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&q=80"}]', 1680000, 'pending', 'SALE10', 100000, '2026-09-28 16:40:00');
+
 -- --------------------------------------------------------------------
--- 6. BẢNG NOTIFICATIONS (Notification Service)
+-- 7. BẢNG PRODUCT_REVIEWS (Product Service)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `product_reviews` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `productId` VARCHAR(64) NOT NULL,
+  `userId` VARCHAR(64) DEFAULT NULL,
+  `userName` VARCHAR(255) NOT NULL,
+  `userAvatar` TEXT,
+  `rating` INT NOT NULL DEFAULT 5,
+  `comment` TEXT NOT NULL,
+  `isBuyer` BOOLEAN DEFAULT 1,
+  `helpfulCount` INT DEFAULT 0,
+  `replyComment` TEXT,
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`productId`) REFERENCES `products`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `product_reviews` (`id`, `productId`, `userId`, `userName`, `rating`, `comment`, `isBuyer`, `helpfulCount`, `replyComment`, `createdAt`) VALUES
+('rev_01_1', 'prod_01', 'usr_customer_01', 'Nguyễn Hoàng Nam', 5, 'Chống ồn ANC đỉnh cao thực sự, đeo liên tục 4 tiếng làm việc rất êm không bị đau tai hay cấn gọng kính. Pin dùng cả tuần chưa hết. Hàng chính hãng đóng gói kỹ lưỡng 10/10!', 1, 18, 'NovaShop cảm ơn bạn Hoàng Nam đã tin tưởng mua sắm và đánh giá sản phẩm. Chúc bạn có những phút giây trải nghiệm âm nhạc tuyệt vời!', '2026-09-21 10:20:00'),
+('rev_01_2', 'prod_01', NULL, 'Trần Thị Mai', 5, 'Âm bass chắc khỏe, âm trường rộng, nghe nhạc pop với acoustic rất nịnh tai. Giao hàng hỏa tốc trong 24h, nhân viên hỗ trợ nhiệt tình.', 1, 9, NULL, '2026-09-22 15:45:00'),
+('rev_01_3', 'prod_01', NULL, 'Lê Minh Trí', 4, 'Tai nghe chất lượng hoàn thiện rất tốt, mic đàm thoại lọc gió tốt khi đi ngoài đường. Hộp đựng hơi to một chút khi bỏ balo nhưng tổng thể rất đáng tiền.', 1, 4, NULL, '2026-09-23 08:30:00'),
+('rev_02_1', 'prod_02', NULL, 'Vũ Đức Anh', 5, 'Vỏ nhôm CNC nguyên khối cực kỳ đầm tay, gõ rất chắc và không bị vang. Switch Banana gõ sướng tay, kết nối Bluetooth chuyển đổi nhanh giữa Mac và Windows.', 1, 14, 'Cảm ơn bạn Đức Anh đã chia sẻ trải nghiệm chuyên nghiệp cùng Keychron Q1 Pro!', '2026-09-24 11:10:00'),
+('rev_02_2', 'prod_02', NULL, 'Phạm Thu Trang', 5, 'Bàn phím xịn, gõ êm, đèn led RGB dịu mắt. Thiết kế retro sang trọng đặt trên bàn làm việc rất tôn góc setup.', 1, 7, NULL, '2026-09-25 14:05:00'),
+('rev_03_1', 'prod_03', NULL, 'Lê Quốc Hưng', 5, 'Màn hình siêu sáng 2000 nits đi ngoài trời nắng gắt nhìn rõ mồn một. Tính năng chạm 2 ngón (Double Tap) cực kỳ tiện khi đang bận nấu ăn hoặc lái xe.', 1, 12, NULL, '2026-09-25 18:20:00'),
+('rev_04_1', 'prod_04', NULL, 'Hoàng Văn Tuấn', 5, 'Áo khoác bomber form chuẩn, vải dù chống gió dày dặn và đường may tỉ mỉ. Lớp lót trần bông ấm áp, mặc rất tôn dáng.', 1, 8, NULL, '2026-09-26 09:40:00'),
+('rev_05_1', 'prod_05', NULL, 'Đỗ Hải Đăng', 5, 'Balo chống nước tuyệt đối, ngăn laptop 15.6 inch êm ái chống sốc tốt. Đệm lưng thoáng khí đeo cả ngày không bị mỏi vai.', 1, 11, NULL, '2026-09-26 16:30:00'),
+('rev_06_1', 'prod_06', NULL, 'Nguyễn Thị Bích', 5, 'Robot quét hút siêu sạch, tự giặt và sấy khô giẻ không hề bị mùi ẩm mốc. Ứng dụng điều khiển tiếng Việt rất dễ dùng cho bố mẹ.', 1, 16, NULL, '2026-09-27 10:15:00'),
+('rev_07_1', 'prod_07', NULL, 'Bùi Thanh Hương', 5, 'Nồi chiên dung tích lớn nướng nguyên con gà 2kg vàng ruộm, giòn rụm bên ngoài mà bên trong vẫn mọng nước. Cực kỳ tiện cho gia đình.', 1, 10, NULL, '2026-09-27 19:00:00'),
+('rev_08_1', 'prod_08', NULL, 'Phan Nhật Minh', 5, 'Sách in đẹp, giấy xốp nhẹ chống lóa mắt. Nội dung truyền cảm hứng mạnh mẽ, rất xứng đáng mua và đọc lại nhiều lần.', 1, 15, NULL, '2026-09-28 12:45:00');
+
+-- --------------------------------------------------------------------
+-- 8. BẢNG NOTIFICATIONS (Notification Service)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `notifications` (
   `id` VARCHAR(64) PRIMARY KEY,
@@ -154,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------
--- 7. BẢNG CHAT_SESSIONS (Chat Service / Live Chat & Gemini AI)
+-- 9. BẢNG CHAT_SESSIONS (Chat Service / Live Chat & Gemini AI)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `chat_sessions` (
   `id` VARCHAR(64) PRIMARY KEY,
@@ -169,7 +240,7 @@ CREATE TABLE IF NOT EXISTS `chat_sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------
--- 8. BẢNG CHAT_MESSAGES (Chat Service / Live Chat & Gemini AI)
+-- 10. BẢNG CHAT_MESSAGES (Chat Service / Live Chat & Gemini AI)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `chat_messages` (
   `id` VARCHAR(64) PRIMARY KEY,

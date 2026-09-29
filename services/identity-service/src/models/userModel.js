@@ -41,34 +41,6 @@ const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  const [rows] = await pool.query('SELECT COUNT(*) as count FROM users');
-  if (rows[0].count === 0) {
-    const defaultAdminPass = await bcrypt.hash('admin', 10);
-    const defaultAdminShopPass = await bcrypt.hash('123456', 10);
-    const defaultCustomerPass = await bcrypt.hash('123456', 10);
-
-    await pool.query(
-      `INSERT INTO users (id, name, email, password, role, phone, address) VALUES 
-      (?, ?, ?, ?, ?, ?, ?),
-      (?, ?, ?, ?, ?, ?, ?),
-      (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        'usr_admin_root', 'Quản Trị Viên', 'admin', defaultAdminPass, 'admin', '0988888888', 'Hà Nội, Việt Nam',
-        'usr_admin_01', 'Quản trị viên Hệ thống', 'admin@shop.com', defaultAdminShopPass, 'admin', '0988888888', 'Hà Nội, Việt Nam',
-        'usr_customer_01', 'Nguyễn Văn Khách', 'customer@shop.com', defaultCustomerPass, 'customer', '0912345678', 'Hồ Chí Minh, Việt Nam'
-      ]
-    );
-  } else {
-    const [adminRow] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin']);
-    if (adminRow.length === 0) {
-      const defaultAdminPass = await bcrypt.hash('admin', 10);
-      await pool.query(
-        'INSERT INTO users (id, name, email, password, role, phone, address) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        ['usr_admin_root', 'Quản Trị Viên', 'admin', defaultAdminPass, 'admin', '0988888888', 'Hà Nội, Việt Nam']
-      );
-    }
-  }
-
   return pool;
 };
 

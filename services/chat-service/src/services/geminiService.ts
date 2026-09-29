@@ -153,85 +153,159 @@ export const callGeminiApi = async (userMessage: string, history: any[] = []): P
     description: p.description
   }));
 
-  const systemInstruction = `Bạn là NovaBot, trợ lý AI tư vấn mua sắm và chăm sóc khách hàng của sàn thương mại điện tử NovaShop (Việt Nam).
-Tôn chỉ làm việc: Lịch sự, chu đáo, nhiệt tình, trung thực, sử dụng tiếng Việt tự nhiên và thêm biểu tượng cảm xúc (emoji) phù hợp.
+  const systemInstruction = `Bạn là NovaBot, nhân viên tư vấn bán hàng chuyên nghiệp và nhiệt tình của sàn thương mại điện tử NovaShop (Việt Nam).
 
-Dưới đây là TOÀN BỘ DANH MỤC SẢN PHẨM HIỆN CÓ CỦA CỬA HÀNG:
+VAI TRÒ & NGUYÊN TẮC TƯ VẤN:
+1. CHỈ tư vấn mua sắm các sản phẩm tại NovaShop, tra cứu đơn hàng và chính sách mua hàng của sàn. Nếu khách hỏi chuyện phiếm, học tập, lập trình hoặc vấn đề ngoài sàn, hãy từ chối lịch sự trong 1 câu và hướng dẫn khách mua sắm sản phẩm.
+2. PHONG CÁCH TRẢ LỜI: Tự nhiên, thông minh, trả lời đúng trọng tâm câu hỏi của khách hàng:
+   - Khi khách hỏi sản phẩm hot / khuyến mãi / flash sale / gợi ý đồ ngon: Hãy tư vấn những sản phẩm Flash Sale hot nhất kèm giá ưu đãi và lý do nên mua.
+   - Khi khách hỏi chi tiết về một sản phẩm (ví dụ: "chi tiết hơn", "chi tiết sản phẩm", "thông số ra sao"): Hãy dùng thông tin mô tả chi tiết (description) trong danh mục bên dưới để giải thích cụ thể về chất liệu, công nghệ, thông số, ưu điểm thực tế. Tuyệt đối không lặp lại câu chào chung chung.
+   - Khi khách hỏi về giá hoặc so sánh: Đưa ra nhận xét khách quan, chính xác dựa trên danh mục.
+3. QUY TẮC HIỂN THỊ THẺ SẢN PHẨM (RẤT QUAN TRỌNG):
+   - Mỗi khi bạn nhắc đến, gợi ý hoặc tư vấn về bất kỳ sản phẩm nào, BẮT BUỘC phải điền ID của sản phẩm đó vào mảng "suggestedProductIds" (từ 1 đến 3 sản phẩm phù hợp nhất).
+   - Hệ thống giao diện sẽ dùng "suggestedProductIds" để hiển thị thẻ sản phẩm tương tác kèm hình ảnh và giá để khách hàng bấm xem chi tiết hoặc thêm giỏ hàng.
+4. ĐỘ DÀI PHẢN HỒI: Vừa vặn, súc tích (khoảng 2 đến 4 câu văn), mạch lạc, dễ đọc. Có thể dùng emoji nhẹ nhàng để tạo sự gần gũi.
+
+DANH MỤC SẢN PHẨM HIỆN CÓ CỦA NOVASHOP:
 ${JSON.stringify(catalogContext, null, 2)}
 
 CHÍNH SÁCH CỬA HÀNG NOVASHOP:
 1. Giao hàng: Giao hỏa tốc 2 giờ nội thành (Hà Nội, TP.HCM), giao toàn quốc 1-3 ngày. Miễn phí ship đơn từ 500.000đ.
-2. Đổi trả: 1 đổi 1 miễn phí trong 7 ngày nếu lỗi nhà sản xuất.
-3. Bảo hành: Bảo hành chính hãng điện tử 12-24 tháng.
-4. Thanh toán: Tiền mặt khi nhận hàng (COD), Thẻ tín dụng, Chuyển khoản ngân hàng.
-5. Hotline: 1900 8888 (8:00 - 21:30 hàng ngày).
+2. Đổi trả: 1 đổi 1 miễn phí trong 7 ngày nếu có lỗi từ nhà sản xuất.
+3. Bảo hành: Chính hãng điện tử 12-24 tháng theo số điện thoại mua hàng.
+4. Hotline: 1900 8888 (8:00 - 21:30 hàng ngày).
 
-QUY TẮC PHẢN HỒI:
-- Trả về kết quả theo định dạng JSON DUY NHẤT:
+QUY TẮC ĐỊNH DẠNG:
+- Trả về JSON thuần túy theo schema:
 {
-  "reply": "Nội dung trả lời khách hàng bằng Markdown thân thiện, súc tích",
-  "suggestedProductIds": ["prod_01", "prod_02"]
+  "reply": "Nội dung tư vấn chi tiết, thông minh và thân thiện bằng tiếng Việt",
+  "suggestedProductIds": ["id_sp_1", "id_sp_2"]
 }
-- Nếu khách hỏi về sản phẩm ngoài danh mục, thông báo lịch sự là shop hiện chưa kinh doanh sản phẩm đó và gợi ý sản phẩm tương tự có sẵn nếu có.
-- Nếu khách hỏi về đơn hàng mà chưa có mã đơn, hướng dẫn khách cung cấp mã đơn hàng.
-- Chỉ trả về chuỗi JSON thuần túy, không bọc trong markdown code block, không thêm bất kỳ văn bản nào bên ngoài JSON.`;
+- Tuyệt đối không bọc trong markdown code block, chỉ trả về chuỗi JSON hợp lệ.`;
 
   const contents: any[] = [];
   const recentHistory = history.slice(-6);
   for (const item of recentHistory) {
-    if (item.sender === 'customer') {
+    if (item.sender === 'customer' || item.sender === 'user') {
       contents.push({ role: 'user', parts: [{ text: item.message }] });
-    } else if (item.sender === 'ai' || item.sender === 'staff') {
+    } else if (item.sender === 'ai' || item.sender === 'staff' || item.sender === 'bot') {
       contents.push({ role: 'model', parts: [{ text: item.message }] });
     }
   }
 
   contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
+  // Thu thập danh sách API keys và xáo trộn ngẫu nhiên để tránh rate limit (tương tự như wellknow xampp)
+  const candidateKeys = config.geminiApiKeys && config.geminiApiKeys.length > 0
+    ? [...config.geminiApiKeys]
+    : (config.geminiApiKey ? [config.geminiApiKey] : []);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents,
-      systemInstruction: {
-        parts: [{ text: systemInstruction }]
-      },
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1000
+  if (candidateKeys.length === 0) {
+    throw new Error('Chưa cài đặt Gemini API Key trong hệ thống');
+  }
+
+  const shuffledKeys = candidateKeys.sort(() => Math.random() - 0.5);
+
+  // Danh sách model ưu tiên và dự phòng
+  const candidateModels = Array.from(new Set([
+    config.geminiModel,
+    ...(config.fallbackModels || [])
+  ])).filter(Boolean);
+
+  let lastError = '';
+
+  for (const requestModel of candidateModels) {
+    for (const apiKey of shuffledKeys) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(requestModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: {
+              parts: [{ text: systemInstruction }]
+            },
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 600,
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errDetail = await response.text();
+          lastError = `[Model: ${requestModel}, Key: ...${apiKey.slice(-6)}] HTTP ${response.status}: ${errDetail}`;
+          console.warn('Gemini key attempt failed, trying next key/model:', lastError);
+          continue;
+        }
+
+        const data: any = await response.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        if (!rawText) {
+          continue;
+        }
+
+        let cleanedText = rawText;
+        if (cleanedText.startsWith('```json')) {
+          cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+        } else if (cleanedText.startsWith('```')) {
+          cleanedText = cleanedText.replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+        }
+
+        let parsed: any;
+        try {
+          parsed = JSON.parse(cleanedText);
+        } catch {
+          parsed = { reply: cleanedText, suggestedProductIds: [] };
+        }
+
+        // Hỗ trợ trích xuất câu trả lời linh hoạt từ nhiều định dạng key JSON mà AI có thể trả về
+        let extractedReply = '';
+        if (typeof parsed === 'string') {
+          extractedReply = parsed;
+        } else if (parsed && typeof parsed === 'object') {
+          extractedReply =
+            parsed.reply ||
+            parsed.response ||
+            parsed.message ||
+            parsed.phan_hoi ||
+            parsed.tra_loi ||
+            parsed.noi_dung ||
+            parsed.content ||
+            parsed.answer ||
+            parsed.text ||
+            '';
+        }
+
+        if (!extractedReply && cleanedText) {
+          extractedReply = cleanedText.replace(/^[\{\}\[\]"'\s]+|[\{\}\[\]"'\s]+$/g, '');
+        }
+
+        const rawSuggested =
+          (parsed && (parsed.suggestedProductIds || parsed.suggested_product_ids || parsed.suggestedProducts || parsed.san_pham_goi_y)) || [];
+        const suggestedProductIds = Array.isArray(rawSuggested) ? rawSuggested : [];
+        const suggestedProducts = products.filter((p) => suggestedProductIds.includes(p.id));
+
+        return {
+          reply: extractedReply || 'Dạ NovaShop có thể hỗ trợ gì thêm cho quý khách về sản phẩm ạ?',
+          suggestedProducts
+        };
+      } catch (err: any) {
+        lastError = err.message;
+        console.warn(`Lỗi khi gọi Gemini với key ...${apiKey.slice(-6)}:`, err.message);
       }
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API Error (${response.status}): ${errorText}`);
+    }
   }
 
-  const data: any = await response.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-
-  let cleanedText = rawText;
-  if (cleanedText.startsWith('```json')) {
-    cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
-  } else if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.replace(/^```\s*/i, '').replace(/```$/i, '').trim();
-  }
-
-  const parsed = JSON.parse(cleanedText);
-  const suggestedProductIds = Array.isArray(parsed.suggestedProductIds) ? parsed.suggestedProductIds : [];
-  const suggestedProducts = products.filter((p) => suggestedProductIds.includes(p.id));
-
-  return {
-    reply: parsed.reply || 'Dạ NovaShop có thể hỗ trợ gì thêm cho quý khách ạ?',
-    suggestedProducts
-  };
+  throw new Error(`Tất cả Gemini API keys và models đều lỗi. Lỗi cuối cùng: ${lastError}`);
 };
 
 export const generateResponse = async (userMessage: string, history: any[] = []): Promise<{ reply: string; suggestedProducts: any[] }> => {
-  if (config.geminiApiKey && config.geminiApiKey.trim() !== '') {
+  const hasKeys = (config.geminiApiKeys && config.geminiApiKeys.length > 0) || (config.geminiApiKey && config.geminiApiKey.trim() !== '');
+  if (hasKeys) {
     try {
       return await callGeminiApi(userMessage, history);
     } catch (err: any) {
