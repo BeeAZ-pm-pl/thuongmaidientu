@@ -43,6 +43,7 @@ interface CartItem {
     imageUrl: string;
     quantity: number;
     variantName?: string;
+    weight?: number;
 }
 
 interface User {
@@ -62,6 +63,7 @@ interface OrderItem {
     quantity: number;
     imageUrl?: string;
     variantName?: string;
+    weight?: number;
 }
 
 interface Order {
@@ -76,8 +78,19 @@ interface Order {
     items: OrderItem[];
     voucherCode?: string | null;
     discountAmount?: number;
+    paymentStatus?: 'unpaid' | 'paid' | string;
+    transactionId?: string | null;
+    shippingFee?: number;
+    provinceId?: number | null;
+    districtId?: number | null;
+    wardCode?: string | null;
+    ghnOrderCode?: string | null;
+    ghnStatus?: string | null;
+    ghnExpectedDelivery?: string | null;
+    ghnTrackingUrl?: string | null;
     createdAt: string;
 }
+
 
 interface ChatMessage {
     id: string | number;
@@ -129,7 +142,38 @@ interface AppState {
     flashCountdownTimer: any;
     appliedVoucher: { code: string; name: string; discountAmount: number; discountType?: string; discountValue?: number; minOrderValue?: number; maxDiscount?: number } | null;
     availableVouchers: any[];
+    selectedProvinceId: number | null;
+    selectedDistrictId: number | null;
+    selectedWardCode: string | null;
+    shippingFee: number;
+    shippingLeadTime: string;
+    checkoutStep: number;
 }
+
+const GHN_STATUS_MAP: Record<string, { label: string; class: string; icon: string; color: string; bg: string }> = {
+    ready_to_pick: { label: 'Chờ lấy hàng', class: 'status-ready-to-pick', icon: 'ri-time-line', color: '#0284c7', bg: '#e0f2fe' },
+    picking: { label: 'Đang lấy hàng', class: 'status-picking', icon: 'ri-truck-line', color: '#0284c7', bg: '#e0f2fe' },
+    cancel: { label: 'Đã hủy đơn GHN', class: 'status-cancel', icon: 'ri-close-circle-line', color: '#ef4444', bg: '#fee2e2' },
+    money_collect_picking: { label: 'Đang thu tiền người gửi', class: 'status-money-picking', icon: 'ri-money-dollar-circle-line', color: '#d97706', bg: '#fef3c7' },
+    picked: { label: 'Đã lấy hàng', class: 'status-picked', icon: 'ri-checkbox-circle-line', color: '#2563eb', bg: '#dbeafe' },
+    storing: { label: 'Hàng tại kho GHN', class: 'status-storing', icon: 'ri-archive-line', color: '#4f46e5', bg: '#e0e7ff' },
+    transporting: { label: 'Đang luân chuyển hàng', class: 'status-transporting', icon: 'ri-road-map-line', color: '#7c3aed', bg: '#ede9fe' },
+    sorting: { label: 'Đang phân loại bưu gửi', class: 'status-sorting', icon: 'ri-shuffle-line', color: '#7c3aed', bg: '#ede9fe' },
+    delivering: { label: 'Đang giao hàng', class: 'status-delivering', icon: 'ri-e-bike-2-line', color: '#ea580c', bg: '#ffedd5' },
+    money_collect_delivering: { label: 'Đang thu tiền người nhận', class: 'status-money-delivering', icon: 'ri-hand-coin-line', color: '#ea580c', bg: '#ffedd5' },
+    delivered: { label: 'Giao hàng thành công', class: 'status-delivered', icon: 'ri-checkbox-circle-fill', color: '#16a34a', bg: '#dcfce7' },
+    delivery_fail: { label: 'Giao hàng thất bại', class: 'status-delivery-fail', icon: 'ri-error-warning-line', color: '#dc2626', bg: '#fee2e2' },
+    waiting_to_return: { label: 'Chờ xác nhận chuyển hoàn', class: 'status-waiting-return', icon: 'ri-arrow-go-back-line', color: '#b45309', bg: '#fef3c7' },
+    return: { label: 'Chuyển hoàn', class: 'status-return', icon: 'ri-arrow-go-back-line', color: '#b45309', bg: '#fef3c7' },
+    return_transporting: { label: 'Luân chuyển hàng hoàn', class: 'status-return-trans', icon: 'ri-road-map-line', color: '#b45309', bg: '#fef3c7' },
+    return_sorting: { label: 'Phân loại hàng hoàn', class: 'status-return-sort', icon: 'ri-shuffle-line', color: '#b45309', bg: '#fef3c7' },
+    returning: { label: 'Đang trả lại người gửi', class: 'status-returning', icon: 'ri-arrow-go-back-fill', color: '#b45309', bg: '#fef3c7' },
+    return_fail: { label: 'Trả lại thất bại', class: 'status-return-fail', icon: 'ri-close-circle-fill', color: '#b91c1c', bg: '#fee2e2' },
+    returned: { label: 'Đã hoàn trả thành công', class: 'status-returned', icon: 'ri-check-line', color: '#475569', bg: '#f1f5f9' },
+    exception: { label: 'Đơn hàng ngoại lệ', class: 'status-exception', icon: 'ri-alert-line', color: '#dc2626', bg: '#fee2e2' },
+    damage: { label: 'Hàng hóa bị hư hỏng', class: 'status-damage', icon: 'ri-skull-line', color: '#dc2626', bg: '#fee2e2' },
+    lost: { label: 'Hàng hóa bị thất lạc', class: 'status-lost', icon: 'ri-question-mark', color: '#dc2626', bg: '#fee2e2' }
+};
 
 const API_BASE = window.location.origin;
 
@@ -141,8 +185,35 @@ const state: AppState = {
     searchQuery: '',
     sortBy: 'newest',
     cart: JSON.parse(localStorage.getItem('novashop_cart') || '[]'),
-    user: JSON.parse(localStorage.getItem('novashop_customer_user') || 'null'),
-    token: localStorage.getItem('novashop_customer_token') || '',
+    user: (() => {
+        try {
+            const rawUser = localStorage.getItem('novashop_customer_user');
+            if (!rawUser) return null;
+            const parsed = JSON.parse(rawUser);
+            if (parsed && parsed.role === 'admin') {
+                localStorage.removeItem('novashop_customer_user');
+                localStorage.removeItem('novashop_customer_token');
+                return null;
+            }
+            return parsed;
+        } catch {
+            return null;
+        }
+    })(),
+    token: (() => {
+        try {
+            const rawUser = localStorage.getItem('novashop_customer_user');
+            if (rawUser) {
+                const parsed = JSON.parse(rawUser);
+                if (parsed && parsed.role === 'admin') {
+                    return '';
+                }
+            }
+            return localStorage.getItem('novashop_customer_token') || '';
+        } catch {
+            return '';
+        }
+    })(),
     activeProduct: null,
     selectedColor: '',
     selectedType: '',
@@ -166,8 +237,15 @@ const state: AppState = {
     chatPollingTimer: null,
     flashCountdownTimer: null,
     appliedVoucher: null,
-    availableVouchers: []
+    availableVouchers: [],
+    selectedProvinceId: null,
+    selectedDistrictId: null,
+    selectedWardCode: null,
+    shippingFee: 0,
+    shippingLeadTime: '',
+    checkoutStep: 1
 };
+
 
 const formatPrice = (amount: number): string => {
     return new Intl.NumberFormat('vi-VN', {
@@ -188,7 +266,7 @@ const formatDate = (dateStr: string): string => {
     });
 };
 
-const showToast = (title: string, message: string, type: 'success' | 'error' | 'warning' = 'success'): void => {
+const showToast = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success'): void => {
     let container = document.getElementById('toastContainer');
     if (!container) {
         container = document.createElement('div');
@@ -197,10 +275,11 @@ const showToast = (title: string, message: string, type: 'success' | 'error' | '
         document.body.appendChild(container);
     }
 
-    const icons = {
+    const icons: Record<string, string> = {
         success: 'ri-checkbox-circle-line',
         error: 'ri-error-warning-line',
-        warning: 'ri-alert-line'
+        warning: 'ri-alert-line',
+        info: 'ri-information-line'
     };
 
     const toast = document.createElement('div');
@@ -1247,6 +1326,7 @@ const renderStorefrontView = (): string => {
 };
 
 const renderCartView = (): string => {
+    const isLoggedIn = !!state.user;
     return `
     <header class="cart-header">
         <div class="cart-header-container">
@@ -1257,7 +1337,7 @@ const renderCartView = (): string => {
                     </div>
                     <span>NovaShop</span>
                 </a>
-                <div class="cart-page-badge">Giỏ Hàng & Thanh Toán</div>
+                <div class="cart-page-badge">Thanh Toán Đơn Hàng</div>
             </div>
             <a href="/" class="btn btn-secondary btn-sm" data-nav-link>
                 <i class="ri-arrow-left-line"></i>
@@ -1277,79 +1357,285 @@ const renderCartView = (): string => {
             </a>
         </div>
 
-        <div id="activeCartView" class="cart-layout" style="${state.cart.length > 0 ? 'display: grid;' : 'display: none;'}">
-            <div class="cart-items-card">
-                <div class="cart-card-header">
-                    <span>Danh Sách Sản Phẩm Đã Chọn</span>
-                    <span id="cartHeaderCount" style="color: var(--primary); font-size: 0.875rem;"></span>
+        <div id="activeCartView" style="${state.cart.length > 0 ? 'display: block;' : 'display: none;'}">
+            <!-- Stepper Progress Bar -->
+            <div class="checkout-stepper-wrapper" style="max-width: 960px; margin: 0 auto 20px; background: #ffffff; border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 14px 20px; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; position: relative;">
+                    <div id="stepTab1" class="checkout-step-indicator" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div id="stepCircle1" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.875rem; background: var(--primary); color: #ffffff; transition: all 0.2s;">1</div>
+                        <div>
+                            <div id="stepLabel1" style="font-size: 0.85rem; font-weight: 800; color: var(--primary);">Giỏ hàng</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">Sản phẩm đã chọn</div>
+                        </div>
+                    </div>
+
+                    <div id="stepLine1" style="flex: 1; height: 2px; background: #e2e8f0; margin: 0 16px;"></div>
+
+                    <div id="stepTab2" class="checkout-step-indicator" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div id="stepCircle2" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.875rem; background: #e2e8f0; color: #64748b; transition: all 0.2s;">2</div>
+                        <div>
+                            <div id="stepLabel2" style="font-size: 0.85rem; font-weight: 700; color: #64748b;">Địa chỉ giao hàng</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">Vị trí & Nơi nhận</div>
+                        </div>
+                    </div>
+
+                    <div id="stepLine2" style="flex: 1; height: 2px; background: #e2e8f0; margin: 0 16px;"></div>
+
+                    <div id="stepTab3" class="checkout-step-indicator" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div id="stepCircle3" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.875rem; background: #e2e8f0; color: #64748b; transition: all 0.2s;">3</div>
+                        <div>
+                            <div id="stepLabel3" style="font-size: 0.85rem; font-weight: 700; color: #64748b;">Vận chuyển & Thanh toán</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">Cước GHN & Đặt hàng</div>
+                        </div>
+                    </div>
                 </div>
-                <div id="cartItemsList" class="cart-items-list"></div>
             </div>
 
-            <div class="cart-checkout-card">
-                <div class="cart-checkout-title">
-                    <i class="ri-shield-check-line" style="color: var(--primary);"></i>
-                    <span>Thông Tin Thanh Toán</span>
+            ${!isLoggedIn ? `
+                <div class="checkout-auth-warning" style="max-width: 960px; margin: 0 auto 20px; background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-lg); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 44px; height: 44px; border-radius: 50%; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                            <i class="ri-lock-2-line"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 1rem; color: #92400e;">Bắt buộc đăng nhập để đặt hàng</div>
+                            <div style="font-size: 0.85rem; color: #b45309;">Quý khách vui lòng đăng nhập để lưu địa chỉ, tính cước vận chuyển chuẩn GHN và hoàn tất đơn hàng.</div>
+                        </div>
+                    </div>
+                    <a href="/login" class="btn btn-primary" data-nav-link style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; font-weight: 700;">
+                        <i class="ri-login-box-line"></i>
+                        <span>Đăng nhập ngay</span>
+                    </a>
+                </div>
+            ` : ''}
+
+            <div class="cart-layout">
+                <!-- Left Column: Multi-step panels -->
+                <div class="cart-steps-container">
+                    <!-- Step 1: Cart Items Review -->
+                    <div id="checkoutStep1Panel" class="checkout-step-panel">
+                        <div class="cart-items-card">
+                            <div class="cart-card-header">
+                                <span><i class="ri-shopping-bag-3-line"></i> Danh Sách Sản Phẩm Trong Giỏ</span>
+                                <span id="cartHeaderCount" style="color: var(--primary); font-size: 0.875rem;"></span>
+                            </div>
+                            <div id="cartItemsList" class="cart-items-list"></div>
+
+                            <div style="padding: 14px 18px; background: #f8fafc; border-top: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                                    <i class="ri-scales-3-line" style="color: #0284c7; font-size: 1.1rem;"></i>
+                                    <span>Tổng trọng lượng gói hàng ước tính:</span>
+                                    <strong id="cartStep1WeightBadge" style="color: #0284c7; font-weight: 700;">-- g</strong>
+                                </div>
+                                <button type="button" id="btnGoToStep2" class="btn btn-primary" style="padding: 9px 22px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                    <span>Tiếp tục: Địa chỉ nhận hàng</span>
+                                    <i class="ri-arrow-right-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Shipping Address -->
+                    <div id="checkoutStep2Panel" class="checkout-step-panel" style="display: none;">
+                        <div class="cart-items-card" style="padding: 24px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                                <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                                    <i class="ri-map-pin-user-line" style="color: var(--primary);"></i>
+                                    <span>Thông Tin Người Nhận & Địa Chỉ Giao Hàng</span>
+                                </div>
+                                <button type="button" id="geoLocateBtn" class="btn btn-sm btn-outline" style="border-color: #3b82f6; color: #1d4ed8; background: #eff6ff; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px;">
+                                    <i class="ri-focus-3-line"></i>
+                                    <span id="geoLocateBtnText">Vị trí của tôi (Định vị tự động)</span>
+                                </button>
+                            </div>
+
+                            <div id="savedAddressNotice" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; align-items: center; justify-content: space-between; font-size: 0.85rem; color: #065f46;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="ri-checkbox-circle-fill" style="color: #059669; font-size: 1.1rem;"></i>
+                                    <span>Đã tự động nạp địa chỉ giao hàng đã lưu của bạn</span>
+                                </div>
+                                <button type="button" id="clearSavedAddressBtn" style="background: none; border: none; color: #dc2626; font-size: 0.75rem; text-decoration: underline; cursor: pointer; font-weight: 600;">
+                                    Xóa địa chỉ này
+                                </button>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label class="form-label" for="checkoutName">Họ và tên người nhận <span style="color: #ef4444;">*</span></label>
+                                <input type="text" id="checkoutName" class="form-input" placeholder="Ví dụ: Nguyễn Văn A" value="${state.user?.name || ''}" required>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label class="form-label" for="checkoutPhone">Số điện thoại giao hàng <span style="color: #ef4444;">*</span></label>
+                                <input type="tel" id="checkoutPhone" class="form-input" placeholder="Ví dụ: 0987654321 (10 số)" value="${state.user?.phone || ''}" required>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" for="checkoutProvince">Tỉnh / Thành phố <span style="color: #ef4444;">*</span></label>
+                                    <select id="checkoutProvince" class="form-select" required>
+                                        <option value="">-- Đang tải Tỉnh/Thành... --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" for="checkoutDistrict">Quận / Huyện <span style="color: #ef4444;">*</span></label>
+                                    <select id="checkoutDistrict" class="form-select" required disabled>
+                                        <option value="">-- Chọn Quận/Huyện --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label class="form-label" for="checkoutWard">Phường / Xã <span style="color: #ef4444;">*</span></label>
+                                <select id="checkoutWard" class="form-select" required disabled>
+                                    <option value="">-- Chọn Phường/Xã --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label" for="checkoutAddress">Địa chỉ cụ thể (Số nhà, tên đường...) <span style="color: #ef4444;">*</span></label>
+                                <input type="text" id="checkoutAddress" class="form-input" placeholder="Số 123 Lê Lợi..." value="${state.user?.address || ''}" required>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <input type="checkbox" id="saveAddressCheckbox" style="width: 16px; height: 16px; cursor: pointer;" checked>
+                                <label for="saveAddressCheckbox" style="margin: 0; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                    Lưu lại địa chỉ này cho các lần mua hàng tiếp theo
+                                </label>
+                            </div>
+
+                            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-light); padding-top: 16px;">
+                                <button type="button" id="btnBackToStep1" class="btn btn-secondary" style="padding: 9px 18px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="ri-arrow-left-line"></i>
+                                    <span>Quay lại giỏ hàng</span>
+                                </button>
+                                <button type="button" id="btnGoToStep3" class="btn btn-primary" style="padding: 9px 22px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                    <span>Tiếp tục: Thanh toán & Vận chuyển</span>
+                                    <i class="ri-arrow-right-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Payment & Shipping Confirmation -->
+                    <div id="checkoutStep3Panel" class="checkout-step-panel" style="display: none;">
+                        <div class="cart-items-card" style="padding: 24px;">
+                            <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <i class="ri-truck-line" style="color: #2563eb;"></i>
+                                <span>Vận Chuyển Chuẩn Giao Hàng Nhanh (GHN)</span>
+                            </div>
+
+                            <!-- Destination Review Card -->
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-weight: 700; color: #166534; font-size: 0.85rem;"><i class="ri-map-pin-line"></i> Địa chỉ giao hàng đã chọn:</span>
+                                    <button type="button" id="btnEditAddressFromStep3" style="background: none; border: none; color: #2563eb; font-size: 0.75rem; text-decoration: underline; cursor: pointer; font-weight: 600;">Sửa</button>
+                                </div>
+                                <div id="step3AddressText" style="font-size: 0.875rem; color: #15803d; font-weight: 600;">--</div>
+                            </div>
+
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; font-size: 0.8125rem;">
+                                    <div>
+                                        <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Trọng lượng tính cước GHN:</span>
+                                        <strong id="step3GhnWeight" style="color: #0284c7; font-size: 0.95rem;">-- g</strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Cước phí vận chuyển GHN:</span>
+                                        <strong id="step3GhnFee" style="color: #2563eb; font-size: 0.95rem;">0 đ</strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Thời gian dự kiến giao:</span>
+                                        <strong id="step3GhnLeadTime" style="color: #16a34a; font-size: 0.95rem;">2 - 3 ngày</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Final Review of Order Items Before Payment -->
+                            <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="ri-shopping-bag-3-line" style="color: var(--primary); font-size: 1.25rem;"></i>
+                                    <span>Danh Sách Sản Phẩm Đặt Mua (Kiểm Tra Lần Cuối)</span>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;"><i class="ri-checkbox-circle-line" style="color: #16a34a;"></i> Xác nhận danh sách đơn hàng</span>
+                            </div>
+
+                            <div id="step3OrderItemsReview" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;"></div>
+
+                            <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 14px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <i class="ri-wallet-3-line" style="color: var(--primary);"></i>
+                                <span>Chọn Phương Thức Thanh Toán</span>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 18px;">
+                                <select id="checkoutPayment" class="form-select" style="font-size: 0.9375rem; padding: 10px 14px; font-weight: 600;">
+                                    <option value="cod">💵 Thanh toán tiền mặt khi nhận hàng (COD)</option>
+                                    <option value="momo">👛 Ví điện tử MoMo (ATM / QR MoMo)</option>
+                                    <option value="sepay">⚡ Chuyển khoản qua SePay (VietQR tự động xác nhận)</option>
+                                    <option value="banking">🏦 Chuyển khoản ngân hàng thủ công</option>
+                                </select>
+                            </div>
+
+                            <div class="cart-voucher-section" style="margin-bottom: 20px;">
+                                <div class="cart-voucher-header">
+                                    <div class="cart-voucher-title">
+                                        <i class="ri-coupon-3-fill" style="color: var(--primary);"></i>
+                                        <span>Mã Giảm Giá / Voucher Ưu Đãi</span>
+                                    </div>
+                                    <button type="button" id="toggleVouchersBtn" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 2px 8px; border-color: #cbd5e1;">
+                                        Danh sách voucher <i class="ri-arrow-down-s-line"></i>
+                                    </button>
+                                </div>
+
+                                <div class="cart-voucher-input-group">
+                                    <input type="text" id="voucherCodeInput" class="form-input form-input-sm cart-voucher-input" placeholder="Nhập mã ưu đãi (vd: NOVASHOP50)">
+                                    <button type="button" id="applyVoucherBtn" class="btn btn-secondary btn-sm" style="font-weight: 700;">Áp dụng</button>
+                                </div>
+
+                                <div id="appliedVoucherContainer"></div>
+                                <div id="voucherSuggestions" class="voucher-suggestions" style="display: none;"></div>
+                            </div>
+
+                            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-light); padding-top: 16px;">
+                                <button type="button" id="btnBackToStep2" class="btn btn-secondary" style="padding: 9px 18px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="ri-arrow-left-line"></i>
+                                    <span>Quay lại thông tin địa chỉ</span>
+                                </button>
+                                <button type="button" id="confirmOrderBtn" class="btn btn-primary btn-lg" style="padding: 10px 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px;">
+                                    <span>Xác Nhận Đặt Hàng</span>
+                                    <i class="ri-check-double-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <form id="checkoutSubmitForm">
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" for="checkoutName">Họ và tên người nhận</label>
-                        <input type="text" id="checkoutName" class="form-input" placeholder="Ví dụ: Nguyễn Văn A" value="${state.user?.name || ''}" required>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" for="checkoutPhone">Số điện thoại giao hàng</label>
-                        <input type="tel" id="checkoutPhone" class="form-input" placeholder="Ví dụ: 0912345678" value="${state.user?.phone || ''}" required>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" for="checkoutAddress">Địa chỉ nhận hàng chi tiết</label>
-                        <textarea id="checkoutAddress" class="form-textarea" rows="2" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required>${state.user?.address || ''}</textarea>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label class="form-label" for="checkoutPayment">Hình thức thanh toán</label>
-                        <select id="checkoutPayment" class="form-select">
-                            <option value="cod">Thanh toán khi nhận hàng (COD)</option>
-                            <option value="banking">Chuyển khoản Ngân hàng / Quét mã VietQR</option>
-                            <option value="vnpay">Ví điện tử VNPAY / MoMo</option>
-                        </select>
-                    </div>
-
-                    <div class="cart-voucher-section">
-                        <div class="cart-voucher-header">
-                            <div class="cart-voucher-title">
-                                <i class="ri-coupon-3-fill" style="color: var(--primary);"></i>
-                                <span>Mã Giảm Giá / Voucher</span>
-                            </div>
-                            <button type="button" id="toggleVouchersBtn" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 2px 8px; border-color: #cbd5e1;">
-                                Danh sách voucher <i class="ri-arrow-down-s-line"></i>
-                            </button>
-                        </div>
-
-                        <div class="cart-voucher-input-group">
-                            <input type="text" id="voucherCodeInput" class="form-input form-input-sm cart-voucher-input" placeholder="Nhập mã ưu đãi (vd: NOVASHOP50)">
-                            <button type="button" id="applyVoucherBtn" class="btn btn-secondary btn-sm" style="font-weight: 700;">Áp dụng</button>
-                        </div>
-
-                        <div id="appliedVoucherContainer"></div>
-
-                        <div id="voucherSuggestions" class="voucher-suggestions" style="display: none;"></div>
+                <!-- Right Column: Order Summary Card -->
+                <div class="cart-checkout-card">
+                    <div class="cart-checkout-title">
+                        <i class="ri-shield-check-line" style="color: var(--primary);"></i>
+                        <span>Tóm Tắt Đơn Hàng</span>
                     </div>
 
                     <div class="cart-price-breakdown">
                         <div class="cart-breakdown-row">
-                            <span>Tạm tính:</span>
+                            <span>Tạm tính hàng:</span>
                             <span id="summarySubtotal">0 đ</span>
+                        </div>
+                        <div class="cart-breakdown-row">
+                            <span>Trọng lượng kiện hàng:</span>
+                            <span id="summaryWeight" style="color: #0284c7; font-weight: 600;">0 g</span>
                         </div>
                         <div class="cart-breakdown-row" id="voucherDiscountRow" style="display: none;">
                             <span>Giảm giá Voucher (<strong id="summaryVoucherCode" style="color: #059669;"></strong>):</span>
                             <span id="summaryVoucherDiscount" style="color: #059669; font-weight: 700;">-0 đ</span>
                         </div>
                         <div class="cart-breakdown-row">
-                            <span>Phí vận chuyển:</span>
-                            <span style="color: var(--success); font-weight: 700;">Miễn phí toàn quốc</span>
+                            <span>Phí vận chuyển GHN:</span>
+                            <span id="summaryShippingFee" style="color: #2563eb; font-weight: 700;">0 đ</span>
+                        </div>
+                        <div class="cart-breakdown-row" id="summaryLeadTimeRow" style="display: none; font-size: 0.75rem; color: var(--text-muted);">
+                            <span>Dự kiến giao hàng (GHN):</span>
+                            <span id="summaryLeadTime" style="font-weight: 600; color: #0284c7;">--</span>
                         </div>
                         <div class="cart-breakdown-row total">
                             <span>Tổng thanh toán:</span>
@@ -1357,11 +1643,10 @@ const renderCartView = (): string => {
                         </div>
                     </div>
 
-                    <button type="submit" id="confirmOrderBtn" class="btn btn-primary btn-lg" style="width: 100%;">
-                        <span>Xác Nhận Đặt Hàng</span>
-                        <i class="ri-check-double-line"></i>
-                    </button>
-                </form>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-light);">
+                        <i class="ri-shield-star-line" style="color: #16a34a;"></i> Đơn hàng được bảo vệ bởi NovaShop. Cước phí và lộ trình vận chuyển được kết nối trực tiếp với hệ thống Giao Hàng Nhanh (GHN).
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -1399,6 +1684,34 @@ const renderOrdersView = (): string => {
                 <h1 class="orders-title">Lịch Sử Đơn Mua</h1>
                 <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px;">Theo dõi tiến độ giao hàng và các đơn hàng của bạn</p>
             </div>
+            <div class="orders-search-wrapper">
+                <i class="ri-search-line" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem;"></i>
+                <input type="text" id="orderSearchInput" class="orders-search-input" placeholder="Tìm theo mã đơn, sản phẩm...">
+            </div>
+        </div>
+
+        <!-- Status Categories / Tabs -->
+        <div class="order-tabs-nav" id="orderTabsNav">
+            <button type="button" class="order-tab-btn active" data-status="all">
+                <span>Tất cả</span>
+                <span class="tab-badge" id="tabCountAll">0</span>
+            </button>
+            <button type="button" class="order-tab-btn" data-status="pending">
+                <span>Chờ xác nhận</span>
+                <span class="tab-badge" id="tabCountPending">0</span>
+            </button>
+            <button type="button" class="order-tab-btn" data-status="processing">
+                <span>Đang xử lý / Vận chuyển</span>
+                <span class="tab-badge" id="tabCountProcessing">0</span>
+            </button>
+            <button type="button" class="order-tab-btn" data-status="completed">
+                <span>Hoàn thành</span>
+                <span class="tab-badge" id="tabCountCompleted">0</span>
+            </button>
+            <button type="button" class="order-tab-btn" data-status="cancelled">
+                <span>Đã hủy</span>
+                <span class="tab-badge" id="tabCountCancelled">0</span>
+            </button>
         </div>
 
         <div id="ordersLoading" style="text-align: center; padding: 40px 0;">
@@ -1408,14 +1721,14 @@ const renderOrdersView = (): string => {
 
         <div id="ordersEmpty" style="display: none; background: #ffffff; border-radius: var(--radius-lg); padding: 60px 20px; text-align: center; border: 1px solid var(--border-light);">
             <i class="ri-inbox-line" style="font-size: 3rem; color: var(--text-light); margin-bottom: 12px; display: block;"></i>
-            <div style="font-size: 1.125rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Bạn chưa có đơn mua nào</div>
-            <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 20px;">Hãy đặt hàng ngay để trải nghiệm dịch vụ của NovaShop</div>
-            <a href="/" class="btn btn-primary" data-nav-link>
+            <div id="ordersEmptyTitle" style="font-size: 1.125rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Bạn chưa có đơn mua nào</div>
+            <div id="ordersEmptyDesc" style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 20px;">Hãy đặt hàng ngay để trải nghiệm dịch vụ của NovaShop</div>
+            <a href="/" class="btn btn-primary" data-nav-link id="ordersEmptyBtn">
                 <span>Mua Sắm Ngay</span>
             </a>
         </div>
 
-        <div id="ordersList"></div>
+        <div id="ordersList" class="orders-list"></div>
     </main>
 
     ${renderFooterTemplate()}
@@ -1583,62 +1896,104 @@ const renderRegisterView = (): string => {
             </div>
 
             <div class="auth-form-panel">
-                <h2 class="auth-title">Đăng Ký Tài Khoản</h2>
-                <p class="auth-subtitle">Nhập đầy đủ thông tin để trở thành thành viên chính thức</p>
+                <!-- Bước 1: Nhập thông tin đăng ký -->
+                <div id="registerStep1Panel">
+                    <h2 class="auth-title">Đăng Ký Tài Khoản</h2>
+                    <p class="auth-subtitle">Nhập đầy đủ thông tin để nhận mã xác thực kích hoạt tài khoản</p>
 
-                <form id="customerRegisterForm" class="auth-form">
-                    <div class="form-group">
-                        <label class="form-label" for="regName">Họ và tên của bạn</label>
-                        <div class="input-with-icon">
-                            <i class="ri-user-line input-icon-left"></i>
-                            <input type="text" id="regName" class="form-input" placeholder="Ví dụ: Nguyễn Văn A" required>
+                    <form id="customerRegisterForm" class="auth-form">
+                        <div class="form-group">
+                            <label class="form-label" for="regName">Họ và tên của bạn</label>
+                            <div class="input-with-icon">
+                                <i class="ri-user-line input-icon-left"></i>
+                                <input type="text" id="regName" class="form-input" placeholder="Ví dụ: Nguyễn Văn A" required>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="regEmail">Địa chỉ Email</label>
-                        <div class="input-with-icon">
-                            <i class="ri-mail-line input-icon-left"></i>
-                            <input type="email" id="regEmail" class="form-input" placeholder="tenban@example.com" required>
+                        <div class="form-group">
+                            <label class="form-label" for="regEmail">Địa chỉ Email (Nhận mã OTP)</label>
+                            <div class="input-with-icon">
+                                <i class="ri-mail-line input-icon-left"></i>
+                                <input type="email" id="regEmail" class="form-input" placeholder="tenban@example.com" required>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="regPassword">Mật khẩu bảo mật</label>
-                        <div class="input-with-icon">
-                            <i class="ri-lock-line input-icon-left"></i>
-                            <input type="password" id="regPassword" class="form-input" placeholder="Tối thiểu 6 ký tự" required>
-                            <button type="button" id="toggleRegPasswordBtn" class="password-toggle-btn" aria-label="Hiện mật khẩu">
-                                <i id="toggleRegPasswordIcon" class="ri-eye-line"></i>
-                            </button>
+                        <div class="form-group">
+                            <label class="form-label" for="regPassword">Mật khẩu bảo mật</label>
+                            <div class="input-with-icon">
+                                <i class="ri-lock-line input-icon-left"></i>
+                                <input type="password" id="regPassword" class="form-input" placeholder="Tối thiểu 6 ký tự" required>
+                                <button type="button" id="toggleRegPasswordBtn" class="password-toggle-btn" aria-label="Hiện mật khẩu">
+                                    <i id="toggleRegPasswordIcon" class="ri-eye-line"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="regPhone">Số điện thoại liên hệ</label>
-                        <div class="input-with-icon">
-                            <i class="ri-phone-line input-icon-left"></i>
-                            <input type="tel" id="regPhone" class="form-input" placeholder="Ví dụ: 0912345678" required>
+                        <div class="form-group">
+                            <label class="form-label" for="regPhone">Số điện thoại liên hệ</label>
+                            <div class="input-with-icon">
+                                <i class="ri-phone-line input-icon-left"></i>
+                                <input type="tel" id="regPhone" class="form-input" placeholder="Ví dụ: 0912345678" required>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="regAddress">Địa chỉ nhận hàng mặc định</label>
-                        <div class="input-with-icon">
-                            <i class="ri-map-pin-line input-icon-left" style="top: 16px;"></i>
-                            <textarea id="regAddress" class="form-textarea" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required></textarea>
+                        <div class="form-group">
+                            <label class="form-label" for="regAddress">Địa chỉ nhận hàng mặc định</label>
+                            <div class="input-with-icon">
+                                <i class="ri-map-pin-line input-icon-left" style="top: 16px;"></i>
+                                <textarea id="regAddress" class="form-textarea" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required></textarea>
+                            </div>
                         </div>
+
+                        <button type="submit" id="regSubmitBtn" class="auth-submit-btn">
+                            <span>Gửi Mã Xác Thực OTP</span>
+                            <i class="ri-mail-send-line"></i>
+                        </button>
+                    </form>
+
+                    <div class="auth-footer-link">
+                        <span>Đã có tài khoản thành viên? </span>
+                        <a href="/login" data-nav-link>Đăng nhập ngay tại đây</a>
                     </div>
+                </div>
 
-                    <button type="submit" id="regSubmitBtn" class="auth-submit-btn">
-                        <span>Hoàn Tất Đăng Ký</span>
-                        <i class="ri-check-line"></i>
-                    </button>
-                </form>
+                <!-- Bước 2: Nhập mã OTP xác thực email -->
+                <div id="registerStep2Panel" class="otp-panel" style="display: none;">
+                    <div class="otp-icon-header">
+                        <i class="ri-mail-check-line"></i>
+                    </div>
+                    <h2 class="auth-title" style="text-align: center;">Xác Thực Email</h2>
+                    <p class="otp-target-desc">
+                        Mã xác thực OTP gồm 6 chữ số đã được gửi tới email <br>
+                        <span id="otpTargetEmail" class="otp-target-email"></span> <br>
+                        Vui lòng nhập mã để kích hoạt tài khoản của bạn.
+                    </p>
 
-                <div class="auth-footer-link">
-                    <span>Đã có tài khoản thành viên? </span>
-                    <a href="/login" data-nav-link>Đăng nhập ngay tại đây</a>
+                    <form id="customerOtpVerifyForm" class="auth-form">
+                        <div class="form-group">
+                            <input type="text" id="regOtpInput" class="otp-code-input" maxlength="6" placeholder="______" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+                        </div>
+
+                        <div class="otp-countdown-wrap">
+                            <i class="ri-time-line"></i>
+                            <span>Mã có hiệu lực trong:</span>
+                            <span id="otpCountdownBadge" class="otp-countdown-badge">05:00</span>
+                        </div>
+
+                        <button type="submit" id="verifyOtpSubmitBtn" class="auth-submit-btn">
+                            <span>Kích Hoạt Tài Khoản</span>
+                            <i class="ri-shield-check-line"></i>
+                        </button>
+
+                        <div class="otp-resend-row">
+                            <span>Chưa nhận được mã? </span>
+                            <button type="button" id="resendOtpBtn" class="otp-resend-btn">Gửi lại mã OTP</button>
+                        </div>
+
+                        <button type="button" id="backToStep1Btn" class="otp-back-link">
+                            <i class="ri-arrow-left-line"></i> Quay lại chỉnh sửa thông tin
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1661,7 +2016,7 @@ const renderApp = (): void => {
         document.title = 'Giỏ Hàng & Đặt Hàng | NovaShop';
         appEl.innerHTML = renderCartView();
         initCartView();
-    } else if (path === '/orders') {
+    } else if (path === '/orders' || path.startsWith('/orders/')) {
         document.title = 'Đơn Mua Của Tôi | NovaShop';
         appEl.innerHTML = renderOrdersView();
         initOrdersView();
@@ -3039,11 +3394,18 @@ function openProductDetail(product: Product): void {
         const buyNowBtn = document.getElementById('novamallBuyNowBtn');
         if (buyNowBtn) {
             buyNowBtn.addEventListener('click', () => {
+                if (!state.user) {
+                    showToast('Yêu cầu đăng nhập', 'Quý khách vui lòng đăng nhập tài khoản để đặt hàng', 'warning');
+                    modal.classList.remove('active');
+                    navigate('/login');
+                    return;
+                }
                 const varLabel = state.selectedVariant
                     ? (state.selectedVariant.name || `${state.selectedColor} ${state.selectedType}`.trim())
                     : undefined;
                 addItemToCart(product, state.selectedQty, varLabel);
                 modal.classList.remove('active');
+                state.checkoutStep = 2;
                 navigate('/cart');
             });
         }
@@ -3072,7 +3434,8 @@ const addItemToCart = (product: Product, quantity: number = 1, variantName?: str
             price: itemPrice,
             imageUrl: itemImage,
             quantity: quantity,
-            variantName: variantName
+            variantName: variantName,
+            weight: (product as any).weight || 300
         });
     }
 
@@ -3080,20 +3443,721 @@ const addItemToCart = (product: Product, quantity: number = 1, variantName?: str
     showToast('Thành công', `Đã thêm ${quantity} sản phẩm vào giỏ hàng`, 'success');
 };
 
+const stripAccentsOnly = (str: string): string => {
+    return (str || '')
+        .toLowerCase()
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'd')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+};
+
+const normalizeLocationString = (str: string): string => {
+    return stripAccentsOnly(str)
+        .replace(/^(tinh|thanh pho|tp\.|tp|quan|q\.|huyen|h\.|thi xa|tx\.|tx|phuong|p\.|xa|thi tran|tt\.)\s*/gi, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const matchGhnEntity = (entity: any, type: 'province' | 'district' | 'ward', allTokens: string[], fullUnaccent: string, fullRaw: string): boolean => {
+    if (!entity) return false;
+    const nameField = type === 'district' ? 'DistrictName' : (type === 'ward' ? 'WardName' : 'ProvinceName');
+    const allNames: string[] = [entity[nameField], ...(entity.NameExtension || [])].filter(Boolean);
+
+    for (const rawName of allNames) {
+        const cleanName = normalizeLocationString(rawName);
+        if (!cleanName) continue;
+
+        // Xử lý các đơn vị hành chính là số (Quận 1, Phường 5, Phường 14...)
+        if (/^\d+$/.test(cleanName)) {
+            const prefix = type === 'district' ? '(quan|q\\.?|district)' : '(phuong|p\\.?|ward)';
+            const regex = new RegExp('\\b' + prefix + '\\s*' + cleanName + '\\b', 'i');
+            if (regex.test(fullUnaccent)) return true;
+
+            for (const token of allTokens) {
+                const unaccentTok = stripAccentsOnly(token);
+                if (new RegExp('\\b' + prefix + '\\s*' + cleanName + '\\b', 'i').test(unaccentTok)) return true;
+            }
+            continue;
+        }
+
+        // Xử lý tên thông thường dạng chữ (Cầu Giấy, Bắc Từ Liêm, Ba Đình, Đống Đa, Phúc Diễn...)
+        for (const token of allTokens) {
+            const cleanToken = normalizeLocationString(token);
+            if (!cleanToken) continue;
+
+            if (cleanName === cleanToken) return true;
+            if (cleanName.length >= 3 && cleanToken.includes(cleanName)) return true;
+            if (cleanToken.length >= 4 && cleanName.includes(cleanToken)) return true;
+        }
+
+        // Kiểm tra đối chiếu với toàn bộ chuỗi địa chỉ
+        if (cleanName.length >= 3) {
+            const escaped = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regexWord = new RegExp('(\\b|\\s)' + escaped + '(\\b|\\s|$)', 'i');
+            const cleanFull = normalizeLocationString(fullUnaccent);
+            if (regexWord.test(' ' + cleanFull + ' ')) return true;
+        }
+    }
+    return false;
+};
+
+let triggerGhnFeeCalculation: (() => Promise<void>) | null = null;
+
 const initCartView = (): void => {
     renderCartItemsList();
     loadAvailableVouchers();
 
-    const checkoutForm = document.getElementById('checkoutSubmitForm');
     const confirmBtn = document.getElementById('confirmOrderBtn') as HTMLButtonElement | null;
     const nameInput = document.getElementById('checkoutName') as HTMLInputElement | null;
     const phoneInput = document.getElementById('checkoutPhone') as HTMLInputElement | null;
-    const addressInput = document.getElementById('checkoutAddress') as HTMLTextAreaElement | null;
+    const addressInput = document.getElementById('checkoutAddress') as HTMLInputElement | null;
     const paymentSelect = document.getElementById('checkoutPayment') as HTMLSelectElement | null;
+    const provinceSelect = document.getElementById('checkoutProvince') as HTMLSelectElement | null;
+    const districtSelect = document.getElementById('checkoutDistrict') as HTMLSelectElement | null;
+    const wardSelect = document.getElementById('checkoutWard') as HTMLSelectElement | null;
+    const saveAddressCheckbox = document.getElementById('saveAddressCheckbox') as HTMLInputElement | null;
+    const savedAddressNotice = document.getElementById('savedAddressNotice');
+    const clearSavedAddressBtn = document.getElementById('clearSavedAddressBtn');
+    const geoLocateBtn = document.getElementById('geoLocateBtn');
+    const geoLocateBtnText = document.getElementById('geoLocateBtnText');
+
     const toggleVouchersBtn = document.getElementById('toggleVouchersBtn');
     const voucherSuggestions = document.getElementById('voucherSuggestions');
     const applyVoucherBtn = document.getElementById('applyVoucherBtn');
     const voucherCodeInput = document.getElementById('voucherCodeInput') as HTMLInputElement | null;
+
+    const btnGoToStep2 = document.getElementById('btnGoToStep2');
+    const btnBackToStep1 = document.getElementById('btnBackToStep1');
+    const btnGoToStep3 = document.getElementById('btnGoToStep3');
+    const btnBackToStep2 = document.getElementById('btnBackToStep2');
+    const btnEditAddressFromStep3 = document.getElementById('btnEditAddressFromStep3');
+
+    const stepTab1 = document.getElementById('stepTab1');
+    const stepTab2 = document.getElementById('stepTab2');
+    const stepTab3 = document.getElementById('stepTab3');
+
+    const step1Panel = document.getElementById('checkoutStep1Panel');
+    const step2Panel = document.getElementById('checkoutStep2Panel');
+    const step3Panel = document.getElementById('checkoutStep3Panel');
+
+    const stepCircle1 = document.getElementById('stepCircle1');
+    const stepCircle2 = document.getElementById('stepCircle2');
+    const stepCircle3 = document.getElementById('stepCircle3');
+    const stepLabel1 = document.getElementById('stepLabel1');
+    const stepLabel2 = document.getElementById('stepLabel2');
+    const stepLabel3 = document.getElementById('stepLabel3');
+    const stepLine1 = document.getElementById('stepLine1');
+    const stepLine2 = document.getElementById('stepLine2');
+
+    const step3AddressText = document.getElementById('step3AddressText');
+    const step3GhnWeight = document.getElementById('step3GhnWeight');
+    const step3GhnFee = document.getElementById('step3GhnFee');
+    const step3GhnLeadTime = document.getElementById('step3GhnLeadTime');
+
+    let ghnProvincesList: any[] = [];
+    let ghnDistrictsList: any[] = [];
+    let ghnWardsList: any[] = [];
+
+    const switchCheckoutStep = (step: number) => {
+        state.checkoutStep = step;
+
+        if (step1Panel) step1Panel.style.display = step === 1 ? 'block' : 'none';
+        if (step2Panel) step2Panel.style.display = step === 2 ? 'block' : 'none';
+        if (step3Panel) step3Panel.style.display = step === 3 ? 'block' : 'none';
+
+        if (stepCircle1 && stepLabel1 && stepLine1) {
+            stepCircle1.style.background = step >= 1 ? 'var(--primary)' : '#e2e8f0';
+            stepCircle1.style.color = step >= 1 ? '#ffffff' : '#64748b';
+            stepCircle1.innerHTML = step > 1 ? '<i class="ri-check-line"></i>' : '1';
+            stepLabel1.style.color = step === 1 ? 'var(--primary)' : (step > 1 ? 'var(--text-main)' : '#64748b');
+            stepLine1.style.background = step >= 2 ? 'var(--primary)' : '#e2e8f0';
+        }
+
+        if (stepCircle2 && stepLabel2 && stepLine2) {
+            stepCircle2.style.background = step >= 2 ? 'var(--primary)' : '#e2e8f0';
+            stepCircle2.style.color = step >= 2 ? '#ffffff' : '#64748b';
+            stepCircle2.innerHTML = step > 2 ? '<i class="ri-check-line"></i>' : '2';
+            stepLabel2.style.color = step === 2 ? 'var(--primary)' : (step > 2 ? 'var(--text-main)' : '#64748b');
+            stepLine2.style.background = step >= 3 ? 'var(--primary)' : '#e2e8f0';
+        }
+
+        if (stepCircle3 && stepLabel3) {
+            stepCircle3.style.background = step >= 3 ? 'var(--primary)' : '#e2e8f0';
+            stepCircle3.style.color = step >= 3 ? '#ffffff' : '#64748b';
+            stepLabel3.style.color = step === 3 ? 'var(--primary)' : '#64748b';
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const loadGhnProvinces = async (): Promise<boolean> => {
+        if (!provinceSelect) return false;
+        try {
+            const res = await fetch(`${API_BASE}/api/orders/ghn/provinces`);
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                ghnProvincesList = data.data;
+                provinceSelect.innerHTML = `<option value="">-- Chọn Tỉnh / Thành phố --</option>` +
+                    ghnProvincesList.map((p: any) => `<option value="${p.ProvinceID}">${p.ProvinceName}</option>`).join('');
+                provinceSelect.disabled = false;
+                return true;
+            } else {
+                provinceSelect.innerHTML = `<option value="">-- Không thể tải tỉnh thành --</option>`;
+                return false;
+            }
+        } catch {
+            if (provinceSelect) provinceSelect.innerHTML = `<option value="">-- Lỗi kết nối GHN --</option>`;
+            return false;
+        }
+    };
+
+    const loadGhnDistricts = async (provinceId: number): Promise<boolean> => {
+        if (!districtSelect) return false;
+        districtSelect.disabled = true;
+        districtSelect.innerHTML = `<option value="">Đang tải Quận / Huyện...</option>`;
+        if (wardSelect) {
+            wardSelect.disabled = true;
+            wardSelect.innerHTML = `<option value="">-- Chọn Phường / Xã --</option>`;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/api/orders/ghn/districts/${provinceId}`);
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                ghnDistrictsList = data.data;
+                districtSelect.innerHTML = `<option value="">-- Chọn Quận / Huyện --</option>` +
+                    ghnDistrictsList.map((d: any) => `<option value="${d.DistrictID}">${d.DistrictName}</option>`).join('');
+                districtSelect.disabled = false;
+                return true;
+            }
+            return false;
+        } catch {
+            districtSelect.innerHTML = `<option value="">-- Lỗi tải Quận / Huyện --</option>`;
+            return false;
+        }
+    };
+
+    const loadGhnWards = async (districtId: number): Promise<boolean> => {
+        if (!wardSelect) return false;
+        wardSelect.disabled = true;
+        wardSelect.innerHTML = `<option value="">Đang tải Phường / Xã...</option>`;
+        try {
+            const res = await fetch(`${API_BASE}/api/orders/ghn/wards/${districtId}`);
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                ghnWardsList = data.data;
+                wardSelect.innerHTML = `<option value="">-- Chọn Phường / Xã --</option>` +
+                    ghnWardsList.map((w: any) => `<option value="${w.WardCode}">${w.WardName}</option>`).join('');
+                wardSelect.disabled = false;
+                return true;
+            }
+            return false;
+        } catch {
+            wardSelect.innerHTML = `<option value="">-- Lỗi tải Phường / Xã --</option>`;
+            return false;
+        }
+    };
+
+    const calculateGhnShippingFee = async () => {
+        if (!state.selectedDistrictId || !state.selectedWardCode) {
+            state.shippingFee = 0;
+            state.shippingLeadTime = '';
+            renderCartItemsList();
+            return;
+        }
+
+        const totalWeight = state.cart.reduce((sum, item) => sum + (Number(item.weight) || 300) * item.quantity, 0);
+        const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+        try {
+            const res = await fetch(`${API_BASE}/api/orders/ghn/calculate-fee`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    district_id: state.selectedDistrictId,
+                    ward_code: state.selectedWardCode,
+                    weight: Math.max(100, totalWeight),
+                    insurance_value: Math.min(5000000, subtotal)
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                state.shippingFee = Number(data.fee) || 0;
+                state.shippingLeadTime = data.leadtime || '';
+                if (step3GhnFee) step3GhnFee.textContent = formatPrice(state.shippingFee);
+                if (step3GhnLeadTime && state.shippingLeadTime) step3GhnLeadTime.textContent = state.shippingLeadTime;
+                if (step3GhnWeight) step3GhnWeight.textContent = `${Math.max(100, totalWeight)} g`;
+            } else {
+                state.shippingFee = 30000;
+            }
+        } catch {
+            state.shippingFee = 30000;
+        }
+        renderCartItemsList();
+    };
+
+    triggerGhnFeeCalculation = calculateGhnShippingFee;
+
+    const restoreSavedAddress = async () => {
+        if (!state.user) return;
+        const savedRaw = localStorage.getItem(`novashop_saved_addr_${state.user.id}`);
+        if (savedRaw) {
+            try {
+                const saved = JSON.parse(savedRaw);
+                if (nameInput && saved.name) nameInput.value = saved.name;
+                if (phoneInput && saved.phone) phoneInput.value = saved.phone;
+                if (addressInput && saved.address) addressInput.value = saved.address;
+
+                if (savedAddressNotice) {
+                    savedAddressNotice.style.display = 'flex';
+                }
+
+                if (saved.provinceId && provinceSelect) {
+                    provinceSelect.value = String(saved.provinceId);
+                    state.selectedProvinceId = Number(saved.provinceId);
+                    const loadedDistricts = await loadGhnDistricts(Number(saved.provinceId));
+                    if (loadedDistricts && saved.districtId && districtSelect) {
+                        districtSelect.value = String(saved.districtId);
+                        state.selectedDistrictId = Number(saved.districtId);
+                        const loadedWards = await loadGhnWards(Number(saved.districtId));
+                        if (loadedWards && saved.wardCode && wardSelect) {
+                            wardSelect.value = String(saved.wardCode);
+                            state.selectedWardCode = String(saved.wardCode);
+                            await calculateGhnShippingFee();
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Lỗi phục hồi địa chỉ đã lưu:', e);
+            }
+        }
+
+        // Tự động phân tích địa chỉ sẵn có trong tài khoản người dùng nếu chưa có lựa chọn GHN
+        if (state.user?.address && ghnProvincesList.length > 0 && (!state.selectedProvinceId || !provinceSelect?.value)) {
+            const rawAddr = state.user.address;
+            const matchedProv = ghnProvincesList.find((p: any) =>
+                matchGhnEntity(p, 'province', rawAddr.split(',').map((s: string) => s.trim()), stripAccentsOnly(rawAddr), rawAddr)
+            );
+            if (matchedProv && provinceSelect) {
+                provinceSelect.value = String(matchedProv.ProvinceID);
+                state.selectedProvinceId = matchedProv.ProvinceID;
+                const loadedDist = await loadGhnDistricts(matchedProv.ProvinceID);
+                if (loadedDist && ghnDistrictsList.length > 0) {
+                    const matchedDist = ghnDistrictsList.find((d: any) =>
+                        matchGhnEntity(d, 'district', rawAddr.split(',').map((s: string) => s.trim()), stripAccentsOnly(rawAddr), rawAddr)
+                    );
+                    if (matchedDist && districtSelect) {
+                        districtSelect.value = String(matchedDist.DistrictID);
+                        state.selectedDistrictId = matchedDist.DistrictID;
+                        const loadedW = await loadGhnWards(matchedDist.DistrictID);
+                        if (loadedW && ghnWardsList.length > 0) {
+                            const matchedW = ghnWardsList.find((w: any) =>
+                                matchGhnEntity(w, 'ward', rawAddr.split(',').map((s: string) => s.trim()), stripAccentsOnly(rawAddr), rawAddr)
+                            );
+                            if (matchedW && wardSelect) {
+                                wardSelect.value = String(matchedW.WardCode);
+                                state.selectedWardCode = String(matchedW.WardCode);
+                                await calculateGhnShippingFee();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    loadGhnProvinces().then(() => {
+        restoreSavedAddress();
+    });
+
+    if (clearSavedAddressBtn) {
+        clearSavedAddressBtn.addEventListener('click', () => {
+            if (state.user) {
+                localStorage.removeItem(`novashop_saved_addr_${state.user.id}`);
+            }
+            if (savedAddressNotice) savedAddressNotice.style.display = 'none';
+            if (addressInput) addressInput.value = '';
+            if (provinceSelect) provinceSelect.value = '';
+            if (districtSelect) {
+                districtSelect.value = '';
+                districtSelect.disabled = true;
+            }
+            if (wardSelect) {
+                wardSelect.value = '';
+                wardSelect.disabled = true;
+            }
+            state.selectedProvinceId = null;
+            state.selectedDistrictId = null;
+            state.selectedWardCode = null;
+            state.shippingFee = 0;
+            renderCartItemsList();
+            showToast('Thông báo', 'Đã xóa địa chỉ đã lưu', 'info');
+        });
+    }
+
+    if (geoLocateBtn) {
+        geoLocateBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                showToast('Thông báo', 'Trình duyệt của bạn không hỗ trợ định vị vị trí', 'warning');
+                return;
+            }
+
+            if (geoLocateBtnText) {
+                geoLocateBtnText.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang xác định vị trí...`;
+            }
+            geoLocateBtn.setAttribute('disabled', 'true');
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    try {
+                        const { latitude, longitude } = position.coords;
+                        const geoRes = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+                            { headers: { 'Accept-Language': 'vi' } }
+                        );
+                        const geoData = await geoRes.json();
+                        const addr = geoData.address || {};
+                        const fullDisplayName = geoData.display_name || '';
+                        const fullUnaccent = stripAccentsOnly(fullDisplayName);
+
+                        // Thu thập tất cả các tokens (mảnh địa chỉ) từ Nominatim
+                        const tokens: string[] = [
+                            ...(fullDisplayName.split(',').map((s: string) => s.trim())),
+                            addr.road,
+                            addr.house_number,
+                            addr.suburb,
+                            addr.quarter,
+                            addr.neighbourhood,
+                            addr.ward,
+                            addr.village,
+                            addr.residential,
+                            addr.hamlet,
+                            addr.city_district,
+                            addr.district,
+                            addr.county,
+                            addr.town,
+                            addr.municipality,
+                            addr.borough,
+                            addr.city,
+                            addr.state,
+                            addr.state_district
+                        ].filter(Boolean) as string[];
+
+                        let matchedProvince: any = null;
+                        let matchedDistrict: any = null;
+                        let matchedWard: any = null;
+
+                        // 1. TÌM VÀ CHỌN TỈNH / THÀNH PHỐ
+                        matchedProvince = ghnProvincesList.find((p: any) =>
+                            matchGhnEntity(p, 'province', tokens, fullUnaccent, fullDisplayName)
+                        );
+
+                        if (matchedProvince && provinceSelect) {
+                            provinceSelect.value = String(matchedProvince.ProvinceID);
+                            state.selectedProvinceId = matchedProvince.ProvinceID;
+                            const districtsLoaded = await loadGhnDistricts(matchedProvince.ProvinceID);
+
+                            if (districtsLoaded && ghnDistrictsList.length > 0) {
+                                // 2. TÌM VÀ CHỌN QUẬN / HUYỆN
+                                matchedDistrict = ghnDistrictsList.find((d: any) =>
+                                    matchGhnEntity(d, 'district', tokens, fullUnaccent, fullDisplayName)
+                                );
+
+                                // Fallback: Tra cứu ngược từ tên Phường/Xã sang Quận/Huyện (dành cho địa chỉ mới sáp nhập hoặc thiếu tên Huyện trên bản đồ)
+                                if (!matchedDistrict) {
+                                    const wardCandidates = [addr.suburb, addr.quarter, addr.neighbourhood, addr.ward, addr.village, addr.town, addr.residential, ...tokens]
+                                        .filter(Boolean)
+                                        .map((s: any) => String(s).trim())
+                                        .filter((s: string) => {
+                                            const clean = normalizeLocationString(s);
+                                            return clean.length >= 3 && clean !== 'viet nam' && clean !== 'vietnam' && clean !== normalizeLocationString(matchedProvince.ProvinceName);
+                                        });
+
+                                    for (const cand of wardCandidates) {
+                                        try {
+                                            const lookupRes = await fetch(`${API_BASE}/api/orders/ghn/lookup-ward?provinceId=${matchedProvince.ProvinceID}&keyword=${encodeURIComponent(cand)}`);
+                                            const lookupData = await lookupRes.json();
+                                            if (lookupData.success && lookupData.data && lookupData.data.district && lookupData.data.ward) {
+                                                matchedDistrict = lookupData.data.district;
+                                                matchedWard = lookupData.data.ward;
+                                                break;
+                                            }
+                                        } catch (e) {
+                                            console.warn('Lỗi tra cứu ngược đơn vị hành chính:', e);
+                                        }
+                                    }
+                                }
+
+                                if (matchedDistrict && districtSelect) {
+                                    districtSelect.value = String(matchedDistrict.DistrictID);
+                                    state.selectedDistrictId = matchedDistrict.DistrictID;
+                                    const wardsLoaded = await loadGhnWards(matchedDistrict.DistrictID);
+
+                                    if (wardsLoaded && ghnWardsList.length > 0) {
+                                        // 3. TÌM VÀ CHỌN PHƯỜNG / XÃ (Nếu chưa có từ lookup)
+                                        if (!matchedWard) {
+                                            matchedWard = ghnWardsList.find((w: any) =>
+                                                matchGhnEntity(w, 'ward', tokens, fullUnaccent, fullDisplayName)
+                                            );
+                                        }
+
+                                        if (matchedWard && wardSelect) {
+                                            wardSelect.value = String(matchedWard.WardCode);
+                                            state.selectedWardCode = String(matchedWard.WardCode);
+                                            await calculateGhnShippingFee();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. ĐIỀN ĐỊA CHỈ CHI TIẾT (SỐ NHÀ, TÊN ĐƯỜNG, ĐỊA DANH)
+                        let streetCandidate = [addr.house_number, addr.road].filter(Boolean).join(' ');
+                        if (!streetCandidate) {
+                            const parts = fullDisplayName.split(',').map((s: string) => s.trim());
+                            const specificParts = parts.filter((part: string) => {
+                                if (!part) return false;
+                                const norm = normalizeLocationString(part);
+                                if (!norm || norm === 'viet nam' || norm === 'vietnam' || /^\d{5,6}$/.test(norm)) return false;
+                                if (matchedProvince && matchGhnEntity(matchedProvince, 'province', [part], stripAccentsOnly(part), part)) return false;
+                                if (matchedDistrict && matchGhnEntity(matchedDistrict, 'district', [part], stripAccentsOnly(part), part)) return false;
+                                if (matchedWard && matchGhnEntity(matchedWard, 'ward', [part], stripAccentsOnly(part), part)) return false;
+                                return true;
+                            });
+                            if (specificParts.length > 0) {
+                                streetCandidate = specificParts.slice(0, 2).join(', ');
+                            } else {
+                                streetCandidate = '';
+                            }
+                        }
+
+                        if (addressInput) {
+                            addressInput.value = streetCandidate;
+                            if (!streetCandidate) {
+                                addressInput.placeholder = 'Nhập số nhà, ngõ/ngách, thôn xóm...';
+                            }
+                        }
+
+                        // 5. LƯU LẠI VÀ THÔNG BÁO RÕ RÀNG THEO KẾT QUẢ THỰC TẾ
+                        if (state.user && matchedProvince) {
+                            const addrToSave: any = {
+                                name: nameInput?.value || state.user.name || '',
+                                phone: phoneInput?.value || state.user.phone || '',
+                                address: streetCandidate || addressInput?.value || '',
+                                provinceId: matchedProvince.ProvinceID
+                            };
+                            if (matchedDistrict) addrToSave.districtId = matchedDistrict.DistrictID;
+                            if (matchedWard) addrToSave.wardCode = matchedWard.WardCode;
+                            localStorage.setItem(`novashop_saved_addr_${state.user.id}`, JSON.stringify(addrToSave));
+                        }
+
+                        if (matchedProvince && matchedDistrict && matchedWard) {
+                            showToast('Định vị thành công', `Đã chọn: ${matchedWard.WardName}, ${matchedDistrict.DistrictName}, ${matchedProvince.ProvinceName}`, 'success');
+                        } else if (matchedProvince && matchedDistrict) {
+                            showToast('Đã nhận diện Quận/Huyện', `Đã chọn: ${matchedDistrict.DistrictName}, ${matchedProvince.ProvinceName}. Vui lòng chọn Phường/Xã!`, 'info');
+                            wardSelect?.focus();
+                        } else if (matchedProvince) {
+                            showToast('Đã nhận diện Tỉnh/Thành', `Đã chọn: ${matchedProvince.ProvinceName}. Vui lòng chọn Quận/Huyện và Phường/Xã!`, 'info');
+                            districtSelect?.focus();
+                        } else {
+                            showToast('Thông báo', 'Không thể nhận diện tự động Tỉnh/Thành từ GPS. Vui lòng chọn thủ công trong danh sách.', 'warning');
+                        }
+                    } catch {
+                        showToast('Thông báo', 'Không thể xác định vị trí chi tiết từ GPS. Vui lòng chọn theo danh mục thủ công.', 'warning');
+                    } finally {
+                        if (geoLocateBtnText) {
+                            geoLocateBtnText.textContent = 'Vị trí của tôi (Định vị tự động)';
+                        }
+                        geoLocateBtn.removeAttribute('disabled');
+                    }
+                },
+                (err) => {
+                    let msg = 'Không thể lấy vị trí hiện tại.';
+                    if (err.code === 1) msg = 'Bạn đã từ chối quyền truy cập vị trí trên trình duyệt.';
+                    showToast('Định vị thất bại', msg, 'warning');
+                    if (geoLocateBtnText) {
+                        geoLocateBtnText.textContent = 'Vị trí của tôi (Định vị tự động)';
+                    }
+                    geoLocateBtn.removeAttribute('disabled');
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
+        });
+    }
+
+    if (provinceSelect) {
+        provinceSelect.addEventListener('change', () => {
+            const pid = parseInt(provinceSelect.value, 10);
+            if (pid) {
+                state.selectedProvinceId = pid;
+                state.selectedDistrictId = null;
+                state.selectedWardCode = null;
+                loadGhnDistricts(pid);
+            } else {
+                state.selectedProvinceId = null;
+                state.selectedDistrictId = null;
+                state.selectedWardCode = null;
+                if (districtSelect) {
+                    districtSelect.disabled = true;
+                    districtSelect.innerHTML = `<option value="">-- Chọn Quận / Huyện --</option>`;
+                }
+                if (wardSelect) {
+                    wardSelect.disabled = true;
+                    wardSelect.innerHTML = `<option value="">-- Chọn Phường / Xã --</option>`;
+                }
+            }
+            calculateGhnShippingFee();
+        });
+    }
+
+    if (districtSelect) {
+        districtSelect.addEventListener('change', () => {
+            const did = parseInt(districtSelect.value, 10);
+            if (did) {
+                state.selectedDistrictId = did;
+                state.selectedWardCode = null;
+                loadGhnWards(did);
+            } else {
+                state.selectedDistrictId = null;
+                state.selectedWardCode = null;
+                if (wardSelect) {
+                    wardSelect.disabled = true;
+                    wardSelect.innerHTML = `<option value="">-- Chọn Phường / Xã --</option>`;
+                }
+            }
+            calculateGhnShippingFee();
+        });
+    }
+
+    if (wardSelect) {
+        wardSelect.addEventListener('change', () => {
+            state.selectedWardCode = wardSelect.value || null;
+            calculateGhnShippingFee();
+        });
+    }
+
+    if (btnGoToStep2) {
+        btnGoToStep2.addEventListener('click', () => {
+            if (!state.user) {
+                showToast('Yêu cầu đăng nhập', 'Quý khách vui lòng đăng nhập tài khoản để đặt hàng', 'warning');
+                navigate('/login');
+                return;
+            }
+            if (state.cart.length === 0) {
+                showToast('Thông báo', 'Giỏ hàng của bạn đang trống', 'warning');
+                return;
+            }
+            switchCheckoutStep(2);
+        });
+    }
+
+    if (btnBackToStep1) {
+        btnBackToStep1.addEventListener('click', () => {
+            switchCheckoutStep(1);
+        });
+    }
+
+    if (btnGoToStep3) {
+        btnGoToStep3.addEventListener('click', () => {
+            const name = nameInput ? nameInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const street = addressInput ? addressInput.value.trim() : '';
+            const provId = provinceSelect ? provinceSelect.value : '';
+            const distId = districtSelect ? districtSelect.value : '';
+            const ward = wardSelect ? wardSelect.value : '';
+
+            if (!name) {
+                showToast('Thiếu thông tin', 'Vui lòng nhập họ và tên người nhận', 'warning');
+                nameInput?.focus();
+                return;
+            }
+            if (!phone || phone.length < 9) {
+                showToast('Thiếu thông tin', 'Vui lòng nhập số điện thoại hợp lệ (10 số)', 'warning');
+                phoneInput?.focus();
+                return;
+            }
+            if (!provId) {
+                showToast('Thiếu thông tin', 'Vui lòng chọn Tỉnh / Thành phố', 'warning');
+                provinceSelect?.focus();
+                return;
+            }
+            if (!distId) {
+                showToast('Thiếu thông tin', 'Vui lòng chọn Quận / Huyện', 'warning');
+                districtSelect?.focus();
+                return;
+            }
+            if (!ward) {
+                showToast('Thiếu thông tin', 'Vui lòng chọn Phường / Xã', 'warning');
+                wardSelect?.focus();
+                return;
+            }
+            if (!street) {
+                showToast('Thiếu thông tin', 'Vui lòng nhập địa chỉ cụ thể (số nhà, đường...)', 'warning');
+                addressInput?.focus();
+                return;
+            }
+
+            const pName = provinceSelect.options[provinceSelect.selectedIndex]?.text || '';
+            const dName = districtSelect.options[districtSelect.selectedIndex]?.text || '';
+            const wName = wardSelect.options[wardSelect.selectedIndex]?.text || '';
+
+            if (step3AddressText) {
+                step3AddressText.textContent = `${name} | ${phone} - ${street}, ${wName}, ${dName}, ${pName}`;
+            }
+
+            if (saveAddressCheckbox && saveAddressCheckbox.checked && state.user) {
+                const addrData = {
+                    name,
+                    phone,
+                    address: street,
+                    provinceId: Number(provId),
+                    districtId: Number(distId),
+                    wardCode: String(ward),
+                    provinceName: pName,
+                    districtName: dName,
+                    wardName: wName
+                };
+                localStorage.setItem(`novashop_saved_addr_${state.user.id}`, JSON.stringify(addrData));
+            }
+
+            calculateGhnShippingFee();
+            switchCheckoutStep(3);
+        });
+    }
+
+    if (btnBackToStep2) {
+        btnBackToStep2.addEventListener('click', () => {
+            switchCheckoutStep(2);
+        });
+    }
+
+    if (btnEditAddressFromStep3) {
+        btnEditAddressFromStep3.addEventListener('click', () => {
+            switchCheckoutStep(2);
+        });
+    }
+
+    if (stepTab1) stepTab1.addEventListener('click', () => switchCheckoutStep(1));
+    if (stepTab2) {
+        stepTab2.addEventListener('click', () => {
+            if (!state.user) {
+                showToast('Yêu cầu đăng nhập', 'Quý khách vui lòng đăng nhập tài khoản để đặt hàng', 'warning');
+                navigate('/login');
+                return;
+            }
+            switchCheckoutStep(2);
+        });
+    }
+    if (stepTab3) {
+        stepTab3.addEventListener('click', () => {
+            if (state.selectedDistrictId && state.selectedWardCode && addressInput?.value.trim()) {
+                switchCheckoutStep(3);
+            }
+        });
+    }
 
     if (toggleVouchersBtn && voucherSuggestions) {
         toggleVouchersBtn.addEventListener('click', () => {
@@ -3141,26 +4205,49 @@ const initCartView = (): void => {
         });
     }
 
-    if (checkoutForm && confirmBtn) {
-        checkoutForm.addEventListener('submit', async (e) => {
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async (e) => {
             e.preventDefault();
+            if (!state.user) {
+                showToast('Yêu cầu đăng nhập', 'Quý khách vui lòng đăng nhập để đặt hàng', 'warning');
+                navigate('/login');
+                return;
+            }
+
             if (state.cart.length === 0) {
                 showToast('Thông báo', 'Giỏ hàng đang trống', 'warning');
                 return;
             }
 
+            const pName = provinceSelect ? provinceSelect.options[provinceSelect.selectedIndex]?.text : '';
+            const dName = districtSelect ? districtSelect.options[districtSelect.selectedIndex]?.text : '';
+            const wName = wardSelect ? wardSelect.options[wardSelect.selectedIndex]?.text : '';
+            const street = addressInput ? addressInput.value.trim() : '';
+
+            if (!nameInput?.value.trim() || !phoneInput?.value.trim() || !street || !state.selectedProvinceId || !state.selectedDistrictId || !state.selectedWardCode) {
+                showToast('Thiếu thông tin', 'Vui lòng kiểm tra lại địa chỉ giao hàng ở bước 2', 'warning');
+                switchCheckoutStep(2);
+                return;
+            }
+
+            const fullAddress = [street, wName, dName, pName].filter(Boolean).join(', ');
+
             const orderData = {
-                userId: state.user ? state.user.id : 'guest_' + Date.now(),
-                customerName: nameInput ? nameInput.value.trim() : '',
-                customerPhone: phoneInput ? phoneInput.value.trim() : '',
-                shippingAddress: addressInput ? addressInput.value.trim() : '',
+                userId: state.user.id,
+                customerName: nameInput.value.trim(),
+                customerPhone: phoneInput.value.trim(),
+                shippingAddress: fullAddress || street,
                 paymentMethod: paymentSelect ? paymentSelect.value : 'cod',
                 items: state.cart,
-                voucherCode: state.appliedVoucher ? state.appliedVoucher.code : undefined
+                voucherCode: state.appliedVoucher ? state.appliedVoucher.code : undefined,
+                shippingFee: state.shippingFee,
+                provinceId: state.selectedProvinceId,
+                districtId: state.selectedDistrictId,
+                wardCode: state.selectedWardCode
             };
 
             confirmBtn.disabled = true;
-            confirmBtn.innerHTML = `<span>Đang xử lý đơn hàng...</span> <i class="ri-loader-4-line ri-spin"></i>`;
+            confirmBtn.innerHTML = `<span>Đang kết nối GHN & tạo đơn...</span> <i class="ri-loader-4-line ri-spin"></i>`;
 
             try {
                 const res = await fetch(`${API_BASE}/api/orders`, {
@@ -3173,18 +4260,51 @@ const initCartView = (): void => {
                 });
                 const result = await res.json();
 
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = `<span>Xác Nhận Đặt Hàng</span> <i class="ri-check-double-line"></i>`;
+
                 if (result.success) {
+                    if (saveAddressCheckbox && saveAddressCheckbox.checked && state.user) {
+                        localStorage.setItem(`novashop_saved_addr_${state.user.id}`, JSON.stringify({
+                            name: orderData.customerName,
+                            phone: orderData.customerPhone,
+                            address: street,
+                            provinceId: orderData.provinceId,
+                            districtId: orderData.districtId,
+                            wardCode: orderData.wardCode,
+                            provinceName: pName,
+                            districtName: dName,
+                            wardName: wName
+                        }));
+                    }
+
                     state.cart = [];
                     state.appliedVoucher = null;
                     saveCart();
-                    showToast('Thành công', `Đặt hàng thành công! Mã đơn: #${result.data.id}`, 'success');
-                    setTimeout(() => {
-                        navigate('/orders');
-                    }, 1000);
+
+                    if (orderData.paymentMethod === 'momo') {
+                        if (result.momoPayment && result.momoPayment.payUrl) {
+                            showToast('Chuyển hướng MoMo', 'Đang chuyển đến cổng thanh toán MoMo...', 'info');
+                            setTimeout(() => {
+                                window.location.href = result.momoPayment.payUrl;
+                            }, 600);
+                        } else {
+                            showToast('Thành công', `Đặt hàng thành công! Mã đơn: #${result.data.id}`, 'success');
+                            setTimeout(() => {
+                                navigate('/orders');
+                            }, 1000);
+                        }
+                    } else if (orderData.paymentMethod === 'sepay' && result.sepayPayment) {
+                        showSepayModal(result.sepayPayment);
+                    } else {
+                        const ghnCodeMsg = result.data.ghnOrderCode ? ` • Mã vận đơn GHN: ${result.data.ghnOrderCode}` : '';
+                        showToast('Thành công', `Đặt hàng thành công! Mã đơn: #${result.data.id}${ghnCodeMsg}`, 'success');
+                        setTimeout(() => {
+                            navigate('/orders');
+                        }, 1200);
+                    }
                 } else {
                     showToast('Lỗi đặt hàng', result.message || 'Không thể tạo đơn hàng', 'error');
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = `<span>Xác Nhận Đặt Hàng</span> <i class="ri-check-double-line"></i>`;
                 }
             } catch {
                 showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
@@ -3192,6 +4312,10 @@ const initCartView = (): void => {
                 confirmBtn.innerHTML = `<span>Xác Nhận Đặt Hàng</span> <i class="ri-check-double-line"></i>`;
             }
         });
+    }
+
+    if (state.checkoutStep && state.checkoutStep > 1) {
+        switchCheckoutStep(state.checkoutStep);
     }
 };
 
@@ -3238,6 +4362,9 @@ const renderCartItemsList = (): void => {
     const headerCount = document.getElementById('cartHeaderCount');
     const summarySubtotal = document.getElementById('summarySubtotal');
     const summaryGrandTotal = document.getElementById('summaryGrandTotal');
+    const summaryWeight = document.getElementById('summaryWeight');
+    const cartStep1WeightBadge = document.getElementById('cartStep1WeightBadge');
+    const step3GhnWeight = document.getElementById('step3GhnWeight');
 
     if (state.cart.length === 0) {
         if (emptyView) emptyView.style.display = 'block';
@@ -3246,10 +4373,15 @@ const renderCartItemsList = (): void => {
     }
 
     if (emptyView) emptyView.style.display = 'none';
-    if (activeView) activeView.style.display = 'grid';
+    if (activeView) activeView.style.display = 'block';
 
     const totalCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const totalWeight = state.cart.reduce((sum, item) => sum + (Number(item.weight) || 300) * item.quantity, 0);
+
+    if (cartStep1WeightBadge) cartStep1WeightBadge.textContent = `${totalWeight} g`;
+    if (summaryWeight) summaryWeight.textContent = `${totalWeight} g`;
+    if (step3GhnWeight) step3GhnWeight.textContent = `${Math.max(100, totalWeight)} g`;
 
     let discount = 0;
     if (state.appliedVoucher) {
@@ -3270,10 +4402,26 @@ const renderCartItemsList = (): void => {
         }
     }
 
-    const grandTotal = Math.max(0, subtotal - discount);
+    const shippingFee = Number(state.shippingFee) || 0;
+    const grandTotal = Math.max(0, subtotal - discount + shippingFee);
 
     if (headerCount) headerCount.textContent = `${totalCount} sản phẩm`;
     if (summarySubtotal) summarySubtotal.textContent = formatPrice(subtotal);
+
+    const summaryShippingFee = document.getElementById('summaryShippingFee');
+    if (summaryShippingFee) {
+        summaryShippingFee.textContent = shippingFee > 0 ? formatPrice(shippingFee) : '0 đ';
+    }
+    const summaryLeadTime = document.getElementById('summaryLeadTime');
+    const summaryLeadTimeRow = document.getElementById('summaryLeadTimeRow');
+    if (summaryLeadTime && summaryLeadTimeRow) {
+        if (state.shippingLeadTime) {
+            summaryLeadTimeRow.style.display = 'flex';
+            summaryLeadTime.textContent = state.shippingLeadTime;
+        } else {
+            summaryLeadTimeRow.style.display = 'none';
+        }
+    }
 
     const discountRow = document.getElementById('voucherDiscountRow');
     const voucherCodeLabel = document.getElementById('summaryVoucherCode');
@@ -3318,6 +4466,7 @@ const renderCartItemsList = (): void => {
                 <div class="cart-row-info">
                     <div class="cart-row-name">${item.name}</div>
                     ${item.variantName ? `<div class="cart-row-variant">Phân loại: ${item.variantName}</div>` : ''}
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Trọng lượng: ${(Number(item.weight) || 300)}g</div>
                     <div class="cart-row-price">${formatPrice(item.price)}</div>
                 </div>
                 <div class="cart-row-controls">
@@ -3334,26 +4483,321 @@ const renderCartItemsList = (): void => {
         `).join('');
 
         itemsList.querySelectorAll('[data-action]').forEach((btn) => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const action = btn.getAttribute('data-action');
                 const idx = parseInt(btn.getAttribute('data-idx') || '0', 10);
                 if (action === 'minus') {
                     state.cart[idx].quantity--;
                     if (state.cart[idx].quantity <= 0) state.cart.splice(idx, 1);
-                    saveCart();
-                    renderCartItemsList();
                 } else if (action === 'plus') {
                     state.cart[idx].quantity++;
-                    saveCart();
-                    renderCartItemsList();
                 } else if (action === 'remove') {
                     state.cart.splice(idx, 1);
-                    saveCart();
-                    renderCartItemsList();
                     showToast('Giỏ hàng', 'Đã xóa sản phẩm khỏi giỏ hàng', 'warning');
+                }
+                saveCart();
+                if (triggerGhnFeeCalculation) {
+                    await triggerGhnFeeCalculation();
+                } else {
+                    renderCartItemsList();
                 }
             });
         });
+    }
+
+    const step3ReviewEl = document.getElementById('step3OrderItemsReview');
+    if (step3ReviewEl) {
+        if (state.cart.length === 0) {
+            step3ReviewEl.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 16px;">Giỏ hàng đang trống</div>`;
+        } else {
+            step3ReviewEl.innerHTML = state.cart.map((item) => `
+                <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; align-items: center; gap: 12px; min-width: 220px; flex: 1;">
+                        <img src="${item.imageUrl}" alt="${item.name}" style="width: 46px; height: 46px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-light); flex-shrink: 0;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 0.875rem; color: var(--text-main); line-height: 1.3; margin-bottom: 3px;">${item.name}</div>
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                ${item.variantName ? `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; background: #eff6ff; color: #2563eb; font-size: 0.75rem; font-weight: 600;"><i class="ri-price-tag-3-line"></i> ${item.variantName}</span>` : ''}
+                                <span style="font-size: 0.8125rem; color: var(--text-muted);">${formatPrice(item.price)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div style="font-size: 0.875rem; color: var(--text-muted); font-weight: 600;">
+                            Số lượng: <strong style="color: var(--text-main);">x${item.quantity}</strong>
+                        </div>
+                        <div style="min-width: 90px; text-align: right;">
+                            <strong style="color: var(--text-main); font-size: 0.95rem;">${formatPrice(item.price * item.quantity)}</strong>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+};
+
+const showMomoPaymentModal = (momoData: any, orderId: string | number, amount: number): void => {
+    const payUrl = momoData.payUrl || '';
+    if (payUrl) {
+        window.location.href = payUrl;
+        return;
+    }
+
+    let modalEl = document.getElementById('momoPaymentModal');
+    if (!modalEl) {
+        modalEl = document.createElement('div');
+        modalEl.id = 'momoPaymentModal';
+        document.body.appendChild(modalEl);
+    }
+    modalEl.className = 'modal-overlay active';
+    modalEl.style.cssText = 'position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px;';
+
+    modalEl.innerHTML = `
+        <div class="modal-card" style="max-width: 480px; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+            <div style="background: linear-gradient(135deg, #a50064 0%, #d82d8b 100%); color: #ffffff; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="ri-wallet-3-fill"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.125rem;">Thanh Toán Ví MoMo</div>
+                        <div style="font-size: 0.8125rem; opacity: 0.95;">Đơn hàng #${orderId} • ${formatPrice(amount)}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-icon close-momo-modal" style="color: #ffffff; font-size: 22px; cursor: pointer; background: transparent; border: none;">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+            <div style="padding: 24px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.875rem;">
+                        <span style="color: var(--text-muted);">Mã đơn hàng:</span>
+                        <strong style="color: var(--text-main);">#${orderId}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.875rem;">
+                        <span style="color: var(--text-muted);">Tổng thanh toán:</span>
+                        <strong style="color: #a50064; font-size: 1.05rem;">${formatPrice(amount)}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span style="color: var(--text-muted);">Phương thức:</span>
+                        <span style="font-weight: 600; color: #a50064;">Ví điện tử MoMo</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-outline close-momo-modal" style="flex: 1;">
+                        Đóng lại
+                    </button>
+                    <button type="button" id="checkMomoStatusBtn" class="btn btn-secondary" style="flex: 1;">
+                        Kiểm tra kết quả
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const closeModal = () => {
+        modalEl!.style.display = 'none';
+        modalEl!.classList.remove('active');
+        navigate('/orders');
+    };
+
+    modalEl.querySelectorAll('.close-momo-modal').forEach(b => {
+        b.addEventListener('click', closeModal);
+    });
+
+    const checkBtn = document.getElementById('checkMomoStatusBtn');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', async () => {
+            checkBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang kiểm tra...`;
+            try {
+                const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
+                const data = await res.json();
+                if (data.success && data.data && data.data.paymentStatus === 'paid') {
+                    showToast('Thành công', 'Đơn hàng đã được thanh toán thành công qua MoMo!', 'success');
+                    closeModal();
+                } else {
+                    showToast('Chưa thanh toán', 'Giao dịch MoMo chưa hoàn tất hoặc đang chờ xử lý', 'warning');
+                    checkBtn.innerHTML = 'Kiểm tra kết quả';
+                }
+            } catch {
+                showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                checkBtn.innerHTML = 'Kiểm tra kết quả';
+            }
+        });
+    }
+};
+
+let sepayPollingInterval: any = null;
+
+const showSepayModal = (data: {
+    orderId: string | number;
+    amount: number;
+    accountNumber: string;
+    bankName: string;
+    bankCode: string;
+    accountName: string;
+    transferContent: string;
+    qrUrl: string;
+}): void => {
+    let modalEl = document.getElementById('sepayPaymentModal');
+    if (!modalEl) {
+        modalEl = document.createElement('div');
+        modalEl.id = 'sepayPaymentModal';
+        document.body.appendChild(modalEl);
+    }
+    modalEl.className = 'modal-overlay active';
+    modalEl.style.cssText = 'position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px;';
+
+    if (sepayPollingInterval) clearInterval(sepayPollingInterval);
+
+    modalEl.innerHTML = `
+        <div class="modal-card" style="max-width: 520px; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="ri-qr-code-line"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.125rem;">Thanh Toán Chuyển Khoản VietQR</div>
+                        <div style="font-size: 0.8125rem; opacity: 0.9;">Đơn hàng #${data.orderId}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-icon close-sepay-modal" style="color: #ffffff; font-size: 22px; cursor: pointer; background: transparent; border: none;">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+            <div style="padding: 24px; text-align: center;">
+                <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Quét mã QR bằng App ngân hàng bất kỳ để chuyển khoản tự động:
+                </div>
+
+                <div style="display: inline-block; padding: 12px; background: #ffffff; border: 2px solid #e2e8f0; border-radius: 14px; box-shadow: var(--shadow-sm); margin-bottom: 16px;">
+                    <img src="${data.qrUrl}" alt="VietQR" style="width: 220px; height: 220px; object-fit: contain; display: block;">
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; text-align: left; font-size: 0.875rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Ngân hàng:</span>
+                        <strong style="color: var(--text-main);">${data.bankName} (${data.bankCode})</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Số tài khoản:</span>
+                        <div>
+                            <strong style="font-family: monospace; font-size: 0.95rem; color: #0284c7;">${data.accountNumber}</strong>
+                            <button type="button" class="btn btn-sm btn-outline copy-text-btn" data-copy="${data.accountNumber}" style="padding: 0 6px; font-size: 0.7rem; margin-left: 4px;">Copy</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Chủ tài khoản:</span>
+                        <strong>${data.accountName}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Số tiền:</span>
+                        <strong style="color: #dc2626; font-size: 1.05rem;">${formatPrice(data.amount)}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
+                        <span style="color: var(--text-muted);">Nội dung chuyển khoản:</span>
+                        <div>
+                            <strong style="color: #059669; font-family: monospace; font-size: 0.95rem;">${data.transferContent}</strong>
+                            <button type="button" class="btn btn-sm btn-outline copy-text-btn" data-copy="${data.transferContent}" style="padding: 0 6px; font-size: 0.7rem; margin-left: 4px;">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.8125rem; color: #0284c7; margin-bottom: 14px;">
+                    <i class="ri-loader-4-line ri-spin" style="font-size: 1rem;"></i>
+                    <span>Đang chờ hệ thống xác nhận thanh toán...</span>
+                </div>
+
+                <button type="button" id="simulateSepaySuccessBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
+                    <i class="ri-checkbox-circle-line"></i> Xác Nhận Đã Chuyển Khoản (SePay Test)
+                </button>
+
+                <div>
+                    <button type="button" class="btn btn-secondary close-sepay-modal" style="width: 100%;">
+                        Đóng lại và xem danh sách đơn hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const closeModal = () => {
+        if (sepayPollingInterval) {
+            clearInterval(sepayPollingInterval);
+            sepayPollingInterval = null;
+        }
+        modalEl!.style.display = 'none';
+        modalEl!.classList.remove('active');
+        navigate('/orders');
+    };
+
+    modalEl.querySelectorAll('.close-sepay-modal').forEach(b => {
+        b.addEventListener('click', closeModal);
+    });
+
+    const simSepayBtn = document.getElementById('simulateSepaySuccessBtn');
+    if (simSepayBtn) {
+        simSepayBtn.addEventListener('click', async () => {
+            simSepayBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang xác nhận thanh toán...`;
+            try {
+                const res = await fetch(`${API_BASE}/api/orders/${data.orderId}/sepay/simulate-success`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                    }
+                });
+                const sData = await res.json();
+                if (sData.success) {
+                    showToast('Thanh toán thành công', `Đơn hàng #${data.orderId} đã được SePay xác nhận và kích hoạt GHN!`, 'success');
+                    closeModal();
+                } else {
+                    showToast('Lỗi', sData.message || 'Không thể xác nhận thanh toán', 'error');
+                    simSepayBtn.innerHTML = `<i class="ri-checkbox-circle-line"></i> Xác Nhận Đã Chuyển Khoản (SePay Test)`;
+                }
+            } catch {
+                showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                simSepayBtn.innerHTML = `<i class="ri-checkbox-circle-line"></i> Xác Nhận Đã Chuyển Khoản (SePay Test)`;
+            }
+        });
+    }
+
+    modalEl.querySelectorAll('.copy-text-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const text = btn.getAttribute('data-copy') || '';
+            navigator.clipboard.writeText(text);
+            showToast('Đã sao chép', text, 'success');
+        });
+    });
+
+    sepayPollingInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/orders/${data.orderId}`);
+            const resData = await res.json();
+            if (resData.success && resData.data && resData.data.paymentStatus === 'paid') {
+                clearInterval(sepayPollingInterval);
+                sepayPollingInterval = null;
+                showToast('Thanh toán thành công', `Đơn hàng #${data.orderId} đã được SePay ghi nhận thanh toán!`, 'success');
+                setTimeout(closeModal, 1500);
+            }
+        } catch {}
+    }, 3000);
+};
+
+const openSepayModalForOrder = async (orderId: string | number) => {
+    try {
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}/sepay/info`);
+        const data = await res.json();
+        if (data.success && data.data) {
+            showSepayModal(data.data);
+        } else {
+            showToast('Lỗi', data.message || 'Không thể lấy thông tin SePay', 'error');
+        }
+    } catch {
+        showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
     }
 };
 
@@ -3362,119 +4806,367 @@ const initOrdersView = async (): Promise<void> => {
     const emptyEl = document.getElementById('ordersEmpty');
     const listEl = document.getElementById('ordersList');
 
-    try {
-        const endpoint = (state.user && state.user.id)
-            ? `${API_BASE}/api/orders/user/${state.user.id}`
-            : `${API_BASE}/api/orders`;
+    const urlParams = new URLSearchParams(window.location.search);
+    const momoResultCode = urlParams.get('momoResult') ?? urlParams.get('resultCode');
+    if (momoResultCode !== null) {
+        const orderId = urlParams.get('orderId') || urlParams.get('extraData');
+        const msg = urlParams.get('message');
+        if (momoResultCode === '0') {
+            showToast('Thanh toán MoMo thành công', `Đơn hàng #${orderId || ''} đã được thanh toán và kích hoạt vận đơn GHN!`, 'success');
+        } else if (momoResultCode === '1006') {
+            showToast('Đã hủy giao dịch', `Bạn đã hủy thanh toán MoMo cho đơn hàng #${orderId || ''}.`, 'warning');
+        } else {
+            showToast('Thanh toán MoMo thất bại', msg || `Mã phản hồi MoMo: ${momoResultCode}`, 'error');
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
-        const res = await fetch(endpoint, {
-            headers: {
-                ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
-            }
-        });
-        const data = await res.json();
+    try {
+        let fetchedOrders: any[] = [];
+        if (state.user && state.user.id) {
+            try {
+                const res = await fetch(`${API_BASE}/api/orders/user/${state.user.id}`, {
+                    headers: {
+                        ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                    }
+                });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    fetchedOrders = data.data;
+                }
+            } catch {}
+        }
+
+        if (fetchedOrders.length === 0) {
+            try {
+                const fallbackRes = await fetch(`${API_BASE}/api/orders`, {
+                    headers: {
+                        ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                    }
+                });
+                const fallbackData = await fallbackRes.json();
+                if (fallbackData.success && Array.isArray(fallbackData.data)) {
+                    if (state.user && state.user.id) {
+                        fetchedOrders = fallbackData.data.filter((o: any) => String(o.userId) === String(state.user!.id));
+                    } else {
+                        fetchedOrders = fallbackData.data;
+                    }
+                }
+            } catch {}
+        }
 
         if (loadingEl) loadingEl.style.display = 'none';
 
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-            state.orders = data.data;
-            if (emptyEl) emptyEl.style.display = 'none';
-            if (listEl) {
-                listEl.innerHTML = state.orders.map((order) => {
-                    const items = Array.isArray(order.items) ? order.items : [];
-                    const statusMap: Record<string, { label: string; class: string }> = {
-                        completed: { label: 'Hoàn thành', class: 'status-completed' },
-                        processing: { label: 'Đang xử lý', class: 'status-processing' },
-                        pending: { label: 'Chờ xác nhận', class: 'status-pending' },
-                        cancelled: { label: 'Đã hủy', class: 'status-cancelled' }
-                    };
-                    const statusInfo = statusMap[order.status] || { label: order.status, class: 'status-pending' };
+        let currentTab = 'all';
+        let searchQuery = '';
 
-                    return `
-                    <div class="order-card">
-                        <div class="order-card-top">
-                            <div class="order-id-group">
-                                <span class="order-id-text">#${order.id}</span>
-                                <span class="order-date-text">• ${formatDate(order.createdAt)}</span>
-                            </div>
-                            <div class="order-status-badge ${statusInfo.class}">
-                                ${statusInfo.label}
-                            </div>
-                        </div>
-
-                        <div class="order-items-list">
-                            ${items.map((item) => `
-                                <div class="order-item-entry">
-                                    <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80'}" alt="${item.name}" class="order-item-thumb">
-                                    <div class="order-item-meta">
-                                        <div class="order-item-name">${item.name}</div>
-                                        ${item.variantName ? `<div class="order-item-variant">Phân loại: ${item.variantName}</div>` : ''}
-                                        <div class="order-item-price-qty">${formatPrice(item.price)} x ${item.quantity}</div>
-                                    </div>
-                                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.9375rem;">
-                                        ${formatPrice(item.price * item.quantity)}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-
-                        <div class="order-card-bottom">
-                            <div>
-                                <div style="font-size: 0.8125rem; color: var(--text-muted);">
-                                    Người nhận: <strong>${order.customerName}</strong> (${order.customerPhone})
-                                </div>
-                                ${order.voucherCode ? `
-                                    <div class="order-voucher-badge">
-                                        <i class="ri-coupon-3-line"></i> Đã áp dụng voucher: <strong>${order.voucherCode}</strong> ${order.discountAmount ? `(-${formatPrice(order.discountAmount)})` : ''}
-                                    </div>
-                                ` : ''}
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 14px;">
-                                ${order.status === 'pending' ? `
-                                    <button class="btn btn-outline btn-sm cancel-order-btn" data-id="${order.id}" style="color: #ef4444; border-color: #fecdd3; padding: 4px 10px;" type="button">
-                                        <i class="ri-close-circle-line"></i> Hủy đơn
-                                    </button>
-                                ` : ''}
-                                <div class="order-total-group">
-                                    <span class="order-total-label">Tổng số tiền:</span>
-                                    <span class="order-total-val">${formatPrice(order.totalAmount)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-
-                listEl.querySelectorAll('.cancel-order-btn').forEach((btn) => {
-                    btn.addEventListener('click', async () => {
-                        const id = btn.getAttribute('data-id');
-                        if (confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
-                            try {
-                                const res = await fetch(`${API_BASE}/api/orders/${id}/status`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
-                                    },
-                                    body: JSON.stringify({ status: 'cancelled' })
-                                });
-                                const result = await res.json();
-                                if (result.success) {
-                                    showToast('Thành công', 'Đã hủy đơn hàng thành công', 'success');
-                                    initOrdersView();
-                                } else {
-                                    showToast('Lỗi', result.message || 'Không thể hủy đơn hàng', 'error');
-                                }
-                            } catch {
-                                showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
-                            }
+        const bindOrderActions = () => {
+            if (!listEl) return;
+            listEl.querySelectorAll('.pay-momo-again-btn').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    if (!id) return;
+                    btn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Chuyển hướng MoMo...`;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/orders/${id}/momo/create`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const result = await res.json();
+                        if (result.success && result.data && result.data.payUrl) {
+                            showToast('Chuyển hướng MoMo', 'Đang chuyển đến cổng thanh toán MoMo...', 'info');
+                            setTimeout(() => {
+                                window.location.href = result.data.payUrl;
+                            }, 500);
+                        } else {
+                            showToast('Lỗi', result.message || 'Không thể tạo cổng MoMo', 'error');
+                            btn.innerHTML = `<i class="ri-wallet-3-line"></i> Thanh toán MoMo`;
                         }
-                    });
+                    } catch {
+                        showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
+                        btn.innerHTML = `<i class="ri-wallet-3-line"></i> Thanh toán MoMo`;
+                    }
+                });
+            });
+
+            listEl.querySelectorAll('.pay-sepay-again-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-id');
+                    if (id) openSepayModalForOrder(id);
+                });
+            });
+
+            listEl.querySelectorAll('.cancel-order-btn').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    if (confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
+                        try {
+                            const res = await fetch(`${API_BASE}/api/orders/${id}/status`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                                },
+                                body: JSON.stringify({ status: 'cancelled' })
+                            });
+                            const result = await res.json();
+                            if (result.success) {
+                                showToast('Thành công', 'Đã hủy đơn hàng thành công', 'success');
+                                initOrdersView();
+                            } else {
+                                showToast('Lỗi', result.message || 'Không thể hủy đơn hàng', 'error');
+                            }
+                        } catch {
+                            showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                        }
+                    }
+                });
+            });
+
+            listEl.querySelectorAll('.sync-ghn-btn').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    if (!id) return;
+                    btn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đồng bộ...`;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/orders/${id}/ghn/sync`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                            }
+                        });
+                        const result = await res.json();
+                        if (result.success) {
+                            showToast('Thành công', result.message || 'Đã cập nhật trạng thái mới nhất từ GHN', 'success');
+                            initOrdersView();
+                        } else {
+                            showToast('Thông báo GHN', result.message || 'Không thể đồng bộ từ GHN', 'warning');
+                            btn.innerHTML = `<i class="ri-refresh-line"></i> Đồng bộ GHN`;
+                        }
+                    } catch {
+                        showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                        btn.innerHTML = `<i class="ri-refresh-line"></i> Đồng bộ GHN`;
+                    }
+                });
+            });
+        };
+
+        const renderFilteredOrders = () => {
+            // Update tab count badges
+            const countAll = state.orders.length;
+            const countPending = state.orders.filter(o => o.status === 'pending').length;
+            const countProcessing = state.orders.filter(o => o.status === 'processing').length;
+            const countCompleted = state.orders.filter(o => o.status === 'completed').length;
+            const countCancelled = state.orders.filter(o => o.status === 'cancelled').length;
+
+            const cAll = document.getElementById('tabCountAll');
+            const cPending = document.getElementById('tabCountPending');
+            const cProcessing = document.getElementById('tabCountProcessing');
+            const cCompleted = document.getElementById('tabCountCompleted');
+            const cCancelled = document.getElementById('tabCountCancelled');
+
+            if (cAll) cAll.textContent = String(countAll);
+            if (cPending) cPending.textContent = String(countPending);
+            if (cProcessing) cProcessing.textContent = String(countProcessing);
+            if (cCompleted) cCompleted.textContent = String(countCompleted);
+            if (cCancelled) cCancelled.textContent = String(countCancelled);
+
+            // Filter by active status category
+            let list = state.orders;
+            if (currentTab !== 'all') {
+                list = list.filter(o => o.status === currentTab);
+            }
+
+            // Filter by search keyword
+            if (searchQuery.trim()) {
+                const q = searchQuery.trim().toLowerCase();
+                list = list.filter(o => {
+                    const idMatch = String(o.id || '').toLowerCase().includes(q);
+                    const ghnMatch = String(o.ghnOrderCode || '').toLowerCase().includes(q);
+                    const itemsMatch = Array.isArray(o.items) && o.items.some((i: any) => String(i.name || '').toLowerCase().includes(q));
+                    return idMatch || ghnMatch || itemsMatch;
                 });
             }
-        } else {
-            if (emptyEl) emptyEl.style.display = 'block';
+
+            if (list.length > 0) {
+                if (emptyEl) emptyEl.style.display = 'none';
+                if (listEl) {
+                    listEl.style.display = 'flex';
+                    listEl.style.flexDirection = 'column';
+                    listEl.style.gap = '20px';
+                    listEl.style.width = '100%';
+                    listEl.innerHTML = list.map((order) => {
+                        const items = Array.isArray(order.items) ? order.items : [];
+                        const statusMap: Record<string, { label: string; class: string }> = {
+                            completed: { label: 'Hoàn thành', class: 'status-completed' },
+                            processing: { label: 'Đang xử lý / Vận chuyển', class: 'status-processing' },
+                            pending: { label: 'Chờ xác nhận', class: 'status-pending' },
+                            cancelled: { label: 'Đã hủy', class: 'status-cancelled' }
+                        };
+                        const statusInfo = statusMap[order.status] || { label: order.status, class: 'status-pending' };
+
+                        const isPaid = order.paymentStatus === 'paid';
+                        const paymentBadgeHtml = isPaid
+                            ? `<span class="badge-paid"><i class="ri-checkbox-circle-fill"></i> Đã thanh toán</span>`
+                            : `<span class="badge-unpaid"><i class="ri-time-line"></i> Chờ thanh toán</span>`;
+
+                        const payMethodName = order.paymentMethod === 'momo'
+                            ? 'MoMo'
+                            : (order.paymentMethod === 'sepay' ? 'SePay (VietQR)' : (order.paymentMethod === 'banking' ? 'Chuyển khoản' : 'COD (GHN)'));
+
+                        const payBadgeClass = order.paymentMethod === 'momo'
+                            ? 'pay-badge-momo'
+                            : (order.paymentMethod === 'sepay' ? 'pay-badge-sepay' : 'pay-badge-cod');
+
+                        return `
+                        <div class="order-card">
+                            <div class="order-card-top">
+                                <div class="order-id-group">
+                                    <span class="order-id-text">#${order.id}</span>
+                                    <span class="order-date-text">• ${formatDate(order.createdAt)}</span>
+                                    <span class="${payBadgeClass}">${payMethodName}</span>
+                                    ${paymentBadgeHtml}
+                                </div>
+                                <div class="order-status-badge ${statusInfo.class}">
+                                    ${statusInfo.label}
+                                </div>
+                            </div>
+
+                            <div class="order-items-list">
+                                ${items.map((item) => `
+                                    <div class="order-item-entry">
+                                        <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
+                                            <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80'}" alt="${item.name}" class="order-item-thumb">
+                                            <div class="order-item-meta">
+                                                <div class="order-item-name">${item.name}</div>
+                                                ${item.variantName ? `<div class="order-item-variant">Phân loại: ${item.variantName}</div>` : ''}
+                                                <div class="order-item-price-qty">${formatPrice(item.price)} x ${item.quantity}</div>
+                                            </div>
+                                        </div>
+                                        <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem; white-space: nowrap; margin-left: 16px;">
+                                            ${formatPrice(item.price * item.quantity)}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="order-card-bottom">
+                                <div style="flex: 1; min-width: 280px;">
+                                    <div style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.5;">
+                                        Người nhận: <strong style="color: var(--text-main);">${order.customerName}</strong> (${order.customerPhone})
+                                    </div>
+                                    <div style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 3px; line-height: 1.4;">
+                                        Địa chỉ: ${order.shippingAddress}
+                                    </div>
+
+                                    ${order.ghnOrderCode ? `
+                                        <div class="ghn-track-box">
+                                            <i class="ri-truck-fill" style="color: #0284c7;"></i>
+                                            <span style="font-size: 0.8125rem; color: #0369a1; font-weight: 600;">Vận đơn GHN:</span>
+                                            <a href="https://tracking.ghn.vn/?order_code=${order.ghnOrderCode}" target="_blank" style="font-weight: 700; color: #0284c7; text-decoration: underline;" title="Tra cứu trực tiếp trên GHN">
+                                                ${order.ghnOrderCode} <i class="ri-external-link-line" style="font-size: 0.75rem;"></i>
+                                            </a>
+                                            ${order.ghnStatus ? `
+                                                <span style="background: ${(GHN_STATUS_MAP[order.ghnStatus]?.bg || '#e0f2fe')}; color: ${(GHN_STATUS_MAP[order.ghnStatus]?.color || '#0284c7')}; border: 1px solid ${(GHN_STATUS_MAP[order.ghnStatus]?.color || '#0284c7')}; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i class="${(GHN_STATUS_MAP[order.ghnStatus]?.icon || 'ri-radar-line')}"></i> ${(GHN_STATUS_MAP[order.ghnStatus]?.label || order.ghnStatus)}
+                                                </span>
+                                            ` : ''}
+                                            <button type="button" class="btn btn-outline btn-sm sync-ghn-btn" data-id="${order.id}" style="padding: 2px 8px; font-size: 0.72rem; border-color: #0284c7; color: #0284c7; background: #ffffff;" title="Đồng bộ trạng thái trực tiếp từ GHN">
+                                                <i class="ri-refresh-line"></i> Đồng bộ GHN
+                                            </button>
+                                            ${order.ghnExpectedDelivery ? `<span style="color: #64748b; font-size: 0.75rem;">(Dự kiến: ${formatDate(order.ghnExpectedDelivery)})</span>` : ''}
+                                        </div>
+                                    ` : ''}
+
+                                    ${order.voucherCode ? `
+                                        <div class="order-voucher-badge" style="margin-top: 6px;">
+                                            <i class="ri-coupon-3-line"></i> Voucher: <strong>${order.voucherCode}</strong> ${order.discountAmount ? `(-${formatPrice(order.discountAmount)})` : ''}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end;">
+                                    ${!isPaid && order.status !== 'cancelled' && order.paymentMethod === 'momo' ? `
+                                        <button class="btn btn-sm btn-primary pay-momo-again-btn" data-id="${order.id}" data-amount="${order.totalAmount}" style="background: #a50064; border-color: #a50064; padding: 6px 12px;" type="button">
+                                            <i class="ri-wallet-3-line"></i> Thanh toán MoMo
+                                        </button>
+                                    ` : ''}
+
+                                    ${!isPaid && order.status !== 'cancelled' && order.paymentMethod === 'sepay' ? `
+                                        <button class="btn btn-sm btn-primary pay-sepay-again-btn" data-id="${order.id}" style="background: #0284c7; border-color: #0284c7; padding: 6px 12px;" type="button">
+                                            <i class="ri-qr-code-line"></i> Quét mã SePay
+                                        </button>
+                                    ` : ''}
+
+                                    ${order.status === 'pending' ? `
+                                        <button class="btn btn-outline btn-sm cancel-order-btn" data-id="${order.id}" style="color: #ef4444; border-color: #fecdd3; padding: 6px 12px;" type="button">
+                                            <i class="ri-close-circle-line"></i> Hủy đơn
+                                        </button>
+                                    ` : ''}
+
+                                    <div class="order-total-group">
+                                        <span class="order-total-label">Tổng số tiền:</span>
+                                        <span class="order-total-val">${formatPrice(order.totalAmount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+
+                    bindOrderActions();
+                }
+            } else {
+                if (listEl) listEl.style.display = 'none';
+                if (emptyEl) {
+                    emptyEl.style.display = 'block';
+                    const titleEl = document.getElementById('ordersEmptyTitle');
+                    const descEl = document.getElementById('ordersEmptyDesc');
+                    const btnEl = document.getElementById('ordersEmptyBtn');
+
+                    if (state.orders.length === 0) {
+                        if (titleEl) titleEl.textContent = 'Bạn chưa có đơn mua nào';
+                        if (descEl) descEl.textContent = 'Hãy đặt hàng ngay để trải nghiệm dịch vụ của NovaShop';
+                        if (btnEl) btnEl.style.display = 'inline-flex';
+                    } else {
+                        const tabLabels: Record<string, string> = {
+                            pending: 'Chờ xác nhận',
+                            processing: 'Đang xử lý / Vận chuyển',
+                            completed: 'Hoàn thành',
+                            cancelled: 'Đã hủy'
+                        };
+                        const tabName = tabLabels[currentTab] || 'danh mục này';
+                        if (titleEl) titleEl.textContent = `Chưa có đơn hàng trong mục "${tabName}"`;
+                        if (descEl) descEl.textContent = searchQuery.trim()
+                            ? `Không tìm thấy đơn hàng nào khớp với "${searchQuery.trim()}".`
+                            : `Hiện tại bạn không có đơn hàng nào ở trạng thái này.`;
+                        if (btnEl) btnEl.style.display = 'none';
+                    }
+                }
+            }
+        };
+
+        // Bind tabs
+        document.querySelectorAll('#orderTabsNav .order-tab-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#orderTabsNav .order-tab-btn').forEach((b) => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTab = btn.getAttribute('data-status') || 'all';
+                renderFilteredOrders();
+            });
+        });
+
+        // Bind search input
+        const searchInput = document.getElementById('orderSearchInput') as HTMLInputElement | null;
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                searchQuery = searchInput.value;
+                renderFilteredOrders();
+            });
         }
+
+        state.orders = fetchedOrders;
+        renderFilteredOrders();
     } catch {
         if (loadingEl) loadingEl.style.display = 'none';
         if (emptyEl) emptyEl.style.display = 'block';
@@ -3541,6 +5233,31 @@ const initLoginView = (): void => {
     }
 };
 
+let otpTimerInterval: any = null;
+
+const startOtpTimer = (seconds: number, badgeEl: HTMLElement | null): void => {
+    if (otpTimerInterval) {
+        clearInterval(otpTimerInterval);
+    }
+    let remaining = seconds;
+    const updateDisplay = () => {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        if (badgeEl) {
+            badgeEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        if (remaining <= 0) {
+            clearInterval(otpTimerInterval);
+            if (badgeEl) {
+                badgeEl.textContent = 'Đã hết hạn';
+            }
+        }
+        remaining--;
+    };
+    updateDisplay();
+    otpTimerInterval = setInterval(updateDisplay, 1000);
+};
+
 const initRegisterView = (): void => {
     const regForm = document.getElementById('customerRegisterForm');
     const submitBtn = document.getElementById('regSubmitBtn') as HTMLButtonElement | null;
@@ -3551,6 +5268,18 @@ const initRegisterView = (): void => {
     const addressInput = document.getElementById('regAddress') as HTMLTextAreaElement | null;
     const togglePassBtn = document.getElementById('toggleRegPasswordBtn');
     const togglePassIcon = document.getElementById('toggleRegPasswordIcon');
+
+    const step1Panel = document.getElementById('registerStep1Panel');
+    const step2Panel = document.getElementById('registerStep2Panel');
+    const otpVerifyForm = document.getElementById('customerOtpVerifyForm');
+    const otpInput = document.getElementById('regOtpInput') as HTMLInputElement | null;
+    const verifyBtn = document.getElementById('verifyOtpSubmitBtn') as HTMLButtonElement | null;
+    const targetEmailEl = document.getElementById('otpTargetEmail');
+    const countdownBadge = document.getElementById('otpCountdownBadge');
+    const resendBtn = document.getElementById('resendOtpBtn') as HTMLButtonElement | null;
+    const backBtn = document.getElementById('backToStep1Btn');
+
+    let registeredEmail = '';
 
     if (togglePassBtn && passwordInput && togglePassIcon) {
         togglePassBtn.addEventListener('click', () => {
@@ -3564,6 +5293,7 @@ const initRegisterView = (): void => {
         });
     }
 
+    // Bước 1: Gửi mã OTP xác thực email
     if (regForm && submitBtn && nameInput && emailInput && passwordInput && phoneInput && addressInput) {
         regForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -3573,11 +5303,16 @@ const initRegisterView = (): void => {
             const phone = phoneInput.value.trim();
             const address = addressInput.value.trim();
 
+            if (password.length < 6) {
+                showToast('Mật khẩu quá ngắn', 'Mật khẩu phải có tối thiểu 6 ký tự', 'error');
+                return;
+            }
+
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<span>Đang đăng ký...</span> <i class="ri-loader-4-line ri-spin"></i>`;
+            submitBtn.innerHTML = `<span>Đang gửi mã OTP...</span> <i class="ri-loader-4-line ri-spin"></i>`;
 
             try {
-                const res = await fetch(`${API_BASE}/api/auth/register`, {
+                const res = await fetch(`${API_BASE}/api/auth/register-send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password, phone, address })
@@ -3585,24 +5320,119 @@ const initRegisterView = (): void => {
                 const result = await res.json();
 
                 if (result.success) {
+                    registeredEmail = email;
+                    if (targetEmailEl) targetEmailEl.textContent = email;
+
+                    if (step1Panel) step1Panel.style.display = 'none';
+                    if (step2Panel) step2Panel.style.display = 'flex';
+
+                    startOtpTimer(300, countdownBadge);
+                    if (otpInput) {
+                        otpInput.value = '';
+                        otpInput.focus();
+                    }
+
+                    showToast('Đã gửi mã OTP', result.message || `Mã xác thực đã được gửi tới email ${email}`, 'success');
+                } else {
+                    showToast('Không thể gửi mã', result.message || 'Lỗi khi gửi mã xác thực', 'error');
+                }
+            } catch {
+                showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ xác thực', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Gửi Mã Xác Thực OTP</span> <i class="ri-mail-send-line"></i>`;
+            }
+        });
+    }
+
+    // Bước 2: Xác thực mã OTP và hoàn tất đăng ký
+    if (otpVerifyForm && verifyBtn && otpInput) {
+        otpVerifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const otp = otpInput.value.trim();
+
+            if (otp.length !== 6) {
+                showToast('Mã OTP không hợp lệ', 'Mã xác thực phải bao gồm đúng 6 chữ số', 'error');
+                return;
+            }
+
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = `<span>Đang kích hoạt...</span> <i class="ri-loader-4-line ri-spin"></i>`;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/register-verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: registeredEmail, otp })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    if (otpTimerInterval) clearInterval(otpTimerInterval);
+
                     state.token = result.data.token;
                     state.user = result.data.user;
                     localStorage.setItem('novashop_customer_token', result.data.token);
                     localStorage.setItem('novashop_customer_user', JSON.stringify(result.data.user));
-                    showToast('Thành công', 'Đăng ký tài khoản thành công! Đang chuyển hướng...', 'success');
+
+                    showToast('Đăng ký thành công', 'Tài khoản của bạn đã được kích hoạt thành công! Đang chuyển hướng...', 'success');
                     setTimeout(() => {
                         navigate('/');
                     }, 1000);
                 } else {
-                    showToast('Đăng ký thất bại', result.message || 'Lỗi đăng ký tài khoản', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = `<span>Hoàn Tất Đăng Ký</span> <i class="ri-check-line"></i>`;
+                    showToast('Xác thực thất bại', result.message || 'Mã OTP không chính xác hoặc đã hết hạn', 'error');
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerHTML = `<span>Kích Hoạt Tài Khoản</span> <i class="ri-shield-check-line"></i>`;
                 }
             } catch {
                 showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `<span>Hoàn Tất Đăng Ký</span> <i class="ri-check-line"></i>`;
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = `<span>Kích Hoạt Tài Khoản</span> <i class="ri-shield-check-line"></i>`;
             }
+        });
+    }
+
+    // Gửi lại mã OTP
+    if (resendBtn) {
+        resendBtn.addEventListener('click', async () => {
+            if (!registeredEmail) return;
+
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Đang gửi lại...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/register-resend-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: registeredEmail })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    startOtpTimer(300, countdownBadge);
+                    if (otpInput) {
+                        otpInput.value = '';
+                        otpInput.focus();
+                    }
+                    showToast('Đã gửi lại OTP', result.message || 'Mã xác thực mới đã được gửi tới email của bạn', 'success');
+                } else {
+                    showToast('Gửi lại thất bại', result.message || 'Chưa thể gửi lại mã lúc này', 'error');
+                }
+            } catch {
+                showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
+            } finally {
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Gửi lại mã OTP';
+            }
+        });
+    }
+
+    // Quay lại chỉnh sửa thông tin bước 1
+    if (backBtn && step1Panel && step2Panel) {
+        backBtn.addEventListener('click', () => {
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+            step2Panel.style.display = 'none';
+            step1Panel.style.display = 'block';
         });
     }
 };

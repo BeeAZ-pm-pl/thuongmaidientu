@@ -17,34 +17,64 @@ DROP TABLE IF EXISTS `vouchers`;
 DROP TABLE IF EXISTS `product_variants`;
 DROP TABLE IF EXISTS `products`;
 DROP TABLE IF EXISTS `categories`;
+DROP TABLE IF EXISTS `admins`;
+DROP TABLE IF EXISTS `customers`;
 DROP TABLE IF EXISTS `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- --------------------------------------------------------------------
--- 1. BẢNG USERS (Identity Service)
+-- 1. BẢNG ADMINS (Identity Service - Tài khoản Quản trị viên)
 -- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `users` (
+CREATE TABLE IF NOT EXISTS `admins` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `username` VARCHAR(255) UNIQUE NOT NULL,
+  `email` VARCHAR(255) UNIQUE NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `phone` VARCHAR(50) DEFAULT '',
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `admins` (`id`, `name`, `username`, `email`, `password`, `phone`, `role`) VALUES
+('usr_admin_root', 'Quản Trị Viên Hệ Thống', 'admin', 'admin@system.local', '$2b$10$WqI1RdgQu9OXqA7ZRvaQ.e/JMjAEzXTYvsjgvE5.Sd1M5M5wv80ja', '0988888888', 'admin'),
+('usr_admin_01', 'Admin Quản Lý Shop', 'admin01', 'admin@shop.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', '0988888888', 'admin');
+
+-- --------------------------------------------------------------------
+-- 2. BẢNG CUSTOMERS (Identity Service - Tài khoản Khách hàng mua sắm)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `customers` (
   `id` VARCHAR(64) PRIMARY KEY,
   `name` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) UNIQUE NOT NULL,
   `password` VARCHAR(255) NOT NULL,
-  `role` VARCHAR(50) DEFAULT 'customer',
   `phone` VARCHAR(50) DEFAULT '',
   `address` TEXT,
+  `role` VARCHAR(50) DEFAULT 'customer',
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dữ liệu tài khoản mẫu được quản lý toàn diện trong SQL (Mật khẩu tài khoản admin: admin hoặc 123456; Khách hàng: 123456)
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `phone`, `address`) VALUES
-('usr_admin_root', 'Quản Trị Viên Hệ Thống', 'admin', '$2b$10$WqI1RdgQu9OXqA7ZRvaQ.e/JMjAEzXTYvsjgvE5.Sd1M5M5wv80ja', 'admin', '0988888888', 'Hà Nội, Việt Nam'),
-('usr_admin_01', 'Admin Quản Lý Shop', 'admin@shop.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'admin', '0988888888', 'Hà Nội, Việt Nam'),
-('usr_customer_01', 'Khách Hàng Mẫu', 'customer@shop.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0912345678', '123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh'),
-('usr_customer_02', 'Nguyễn Hoàng Nam', 'hoangnam@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0905123456', '45 Lê Duẩn, Quận Hải Châu, Đà Nẵng'),
-('usr_customer_03', 'Trần Thị Mai', 'maitran@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0934567890', '78 Cầu Giấy, Hà Nội'),
-('usr_customer_04', 'Lê Quốc Hưng', 'quochung@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', 'customer', '0987654321', '12 Hoàng Diệu, TP. Nha Trang');
+INSERT INTO `customers` (`id`, `name`, `email`, `password`, `phone`, `address`, `role`) VALUES
+('usr_customer_01', 'Khách Hàng Mẫu', 'customer@shop.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', '0912345678', '123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh', 'customer'),
+('usr_customer_02', 'Nguyễn Hoàng Nam', 'hoangnam@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', '0905123456', '45 Lê Duẩn, Quận Hải Châu, Đà Nẵng', 'customer'),
+('usr_customer_03', 'Trần Thị Mai', 'maitran@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', '0934567890', '78 Cầu Giấy, Hà Nội', 'customer'),
+('usr_customer_04', 'Lê Quốc Hưng', 'quochung@gmail.com', '$2b$10$MpXB0RB9DiiD/4B8OBDzWOGeZ7R.kbIF3cswuM4Cj079SDELjdPV2', '0987654321', '12 Hoàng Diệu, TP. Nha Trang', 'customer');
 
 -- --------------------------------------------------------------------
--- 2. BẢNG CATEGORIES (Product Service)
+-- 3. BẢNG CUSTOMER_OTPS (Xác thực OTP Email đăng ký tài khoản)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `customer_otps` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL,
+  `otp` VARCHAR(10) NOT NULL,
+  `payload` JSON NOT NULL,
+  `expiresAt` DATETIME NOT NULL,
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------------------
+-- 4. BẢNG CATEGORIES (Product Service)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `categories` (
   `id` VARCHAR(64) PRIMARY KEY,
@@ -169,10 +199,20 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `status` VARCHAR(50) DEFAULT 'pending',
   `voucherCode` VARCHAR(50) DEFAULT NULL,
   `discountAmount` BIGINT DEFAULT 0,
+  `paymentStatus` VARCHAR(50) DEFAULT 'unpaid',
+  `transactionId` VARCHAR(128) DEFAULT NULL,
+  `shippingFee` BIGINT DEFAULT 0,
+  `provinceId` INT DEFAULT NULL,
+  `districtId` INT DEFAULT NULL,
+  `wardCode` VARCHAR(30) DEFAULT NULL,
+  `ghnOrderCode` VARCHAR(64) DEFAULT NULL,
+  `ghnStatus` VARCHAR(64) DEFAULT NULL,
+  `ghnExpectedDelivery` VARCHAR(64) DEFAULT NULL,
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`voucherCode`) REFERENCES `vouchers`(`code`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 INSERT INTO `orders` (`id`, `userId`, `customerName`, `customerPhone`, `shippingAddress`, `paymentMethod`, `items`, `totalAmount`, `status`, `voucherCode`, `discountAmount`, `createdAt`) VALUES
 ('ord_1001', 'usr_customer_01', 'Khách Hàng Mẫu', '0912345678', '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 'cod', '[{"productId":"prod_01","variantId":"var_01_1","name":"Tai nghe Bluetooth Sony WH-1000XM5 Chống Ồn","variantName":"Đen Huyền Bí - Bản Tiêu Chuẩn","price":7490000,"quantity":1,"imageUrl":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"}]', 7390000, 'completed', 'VIP100', 100000, '2026-09-20 14:30:00'),

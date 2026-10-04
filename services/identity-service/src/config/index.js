@@ -11,5 +11,16 @@ module.exports = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'ecommerce_db'
+  },
+  mail: {
+    host: process.env.MAIL_HOST || 'smtp.gmail.com',
+    port: Number(process.env.MAIL_PORT) || 587,
+    secure: process.env.MAIL_SECURE === 'true',
+    auth: {
+      user: process.env.MAIL_USERNAME || '',
+      pass: process.env.MAIL_PASSWORD || ''
+    },
+    fromAddress: process.env.MAIL_FROM_ADDRESS || 'no-reply@novashop.com',
+    fromName: process.env.MAIL_FROM_NAME || 'NovaShop'
   }
 };

@@ -1,4 +1,28 @@
 "use strict";
+const GHN_STATUS_MAP = {
+    ready_to_pick: { label: 'Chờ lấy hàng', color: '#0284c7', bg: '#e0f2fe' },
+    picking: { label: 'Đang lấy hàng', color: '#0284c7', bg: '#e0f2fe' },
+    cancel: { label: 'Đã hủy đơn GHN', color: '#ef4444', bg: '#fee2e2' },
+    money_collect_picking: { label: 'Đang thu tiền người gửi', color: '#d97706', bg: '#fef3c7' },
+    picked: { label: 'Đã lấy hàng', color: '#2563eb', bg: '#dbeafe' },
+    storing: { label: 'Hàng tại kho GHN', color: '#4f46e5', bg: '#e0e7ff' },
+    transporting: { label: 'Đang luân chuyển hàng', color: '#7c3aed', bg: '#ede9fe' },
+    sorting: { label: 'Đang phân loại bưu gửi', color: '#7c3aed', bg: '#ede9fe' },
+    delivering: { label: 'Đang giao hàng', color: '#ea580c', bg: '#ffedd5' },
+    money_collect_delivering: { label: 'Đang thu tiền người nhận', color: '#ea580c', bg: '#ffedd5' },
+    delivered: { label: 'Giao hàng thành công', color: '#16a34a', bg: '#dcfce7' },
+    delivery_fail: { label: 'Giao hàng thất bại', color: '#dc2626', bg: '#fee2e2' },
+    waiting_to_return: { label: 'Chờ xác nhận chuyển hoàn', color: '#b45309', bg: '#fef3c7' },
+    return: { label: 'Chuyển hoàn', color: '#b45309', bg: '#fef3c7' },
+    return_transporting: { label: 'Luân chuyển hàng hoàn', color: '#b45309', bg: '#fef3c7' },
+    return_sorting: { label: 'Phân loại hàng hoàn', color: '#b45309', bg: '#fef3c7' },
+    returning: { label: 'Đang trả lại người gửi', color: '#b45309', bg: '#fef3c7' },
+    return_fail: { label: 'Trả lại thất bại', color: '#b91c1c', bg: '#fee2e2' },
+    returned: { label: 'Đã hoàn trả thành công', color: '#475569', bg: '#f1f5f9' },
+    exception: { label: 'Đơn hàng ngoại lệ', color: '#dc2626', bg: '#fee2e2' },
+    damage: { label: 'Hàng hóa bị hư hỏng', color: '#dc2626', bg: '#fee2e2' },
+    lost: { label: 'Hàng hóa bị thất lạc', color: '#dc2626', bg: '#fee2e2' }
+};
 const API_BASE = window.location.origin;
 const state = {
     currentRoute: window.location.pathname || '/admin',
@@ -7,8 +31,38 @@ const state = {
     users: [],
     categories: [],
     stats: null,
-    adminUser: JSON.parse(localStorage.getItem('novashop_admin_user') || 'null'),
-    token: localStorage.getItem('novashop_admin_token') || '',
+    adminUser: (() => {
+        try {
+            const rawUser = localStorage.getItem('novashop_admin_user');
+            if (!rawUser)
+                return null;
+            const parsed = JSON.parse(rawUser);
+            if (parsed && parsed.role !== 'admin') {
+                localStorage.removeItem('novashop_admin_user');
+                localStorage.removeItem('novashop_admin_token');
+                return null;
+            }
+            return parsed;
+        }
+        catch {
+            return null;
+        }
+    })(),
+    token: (() => {
+        try {
+            const rawUser = localStorage.getItem('novashop_admin_user');
+            if (rawUser) {
+                const parsed = JSON.parse(rawUser);
+                if (parsed && parsed.role !== 'admin') {
+                    return '';
+                }
+            }
+            return localStorage.getItem('novashop_admin_token') || '';
+        }
+        catch {
+            return '';
+        }
+    })(),
     chatSessions: [],
     selectedSessionId: null,
     selectedSession: null,
@@ -434,6 +488,10 @@ const renderAdminDashboardView = () => {
             <label class="form-label" for="prodDescInput">Mô tả sản phẩm</label>
             <textarea id="prodDescInput" class="form-textarea" rows="3"></textarea>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="prodWeightInput">Trọng lượng kiện hàng (gram - dùng tính cước GHN)</label>
+            <input type="number" min="10" step="50" id="prodWeightInput" class="form-input" placeholder="Ví dụ: 300, 500, 1500..." value="300" required>
+          </div>
 
           <div class="variant-manager-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -511,6 +569,10 @@ const initAdminLogin = () => {
                 });
                 const result = await res.json();
                 if (result.success) {
+                    if (result.data?.user?.role !== 'admin') {
+                        showToast('Truy cập bị từ chối', 'Tài khoản không đủ thẩm quyền quản trị viên', 'error');
+                        return;
+                    }
                     state.token = result.data.token;
                     state.adminUser = result.data.user;
                     localStorage.setItem('novashop_admin_token', result.data.token);
@@ -703,6 +765,7 @@ const resetProductForm = () => {
     const ratingInput = document.getElementById('prodRatingInput');
     const imgInput = document.getElementById('prodImageInput');
     const descInput = document.getElementById('prodDescInput');
+    const weightInput = document.getElementById('prodWeightInput');
     const title = document.getElementById('productModalTitle');
     const btnText = document.getElementById('saveProductBtnText');
     if (editId)
@@ -721,6 +784,8 @@ const resetProductForm = () => {
         imgInput.value = '';
     if (descInput)
         descInput.value = '';
+    if (weightInput)
+        weightInput.value = '300';
     if (title)
         title.textContent = 'Thêm Sản Phẩm Mới';
     if (btnText)
@@ -757,6 +822,7 @@ const bindProductForm = () => {
             const rating = parseFloat(document.getElementById('prodRatingInput')?.value || '5.0');
             const imageUrl = document.getElementById('prodImageInput')?.value.trim() || '';
             const description = document.getElementById('prodDescInput')?.value.trim() || '';
+            const weight = parseInt(document.getElementById('prodWeightInput')?.value || '300', 10);
             const payload = {
                 name,
                 category,
@@ -764,6 +830,7 @@ const bindProductForm = () => {
                 originalPrice: originalPrice > 0 ? originalPrice : price,
                 stock,
                 rating,
+                weight: weight > 0 ? weight : 300,
                 imageUrl,
                 description
             };
@@ -853,6 +920,30 @@ const renderOrders = () => {
             cancelled: { label: 'Đã hủy', class: 'status-cancelled' }
         };
         const s = statusMap[o.status] || { label: o.status, class: 'status-pending' };
+        const methodLower = (o.paymentMethod || '').toLowerCase();
+        let methodBadge = `<span class="pay-badge">${(o.paymentMethod || 'COD').toUpperCase()}</span>`;
+        if (methodLower === 'momo') {
+            methodBadge = `<span class="pay-badge" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;"><i class="ri-wallet-3-line"></i> MoMo</span>`;
+        }
+        else if (methodLower === 'sepay' || methodLower === 'vietqr') {
+            methodBadge = `<span class="pay-badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;"><i class="ri-qr-code-line"></i> SePay QR</span>`;
+        }
+        else if (methodLower === 'banking') {
+            methodBadge = `<span class="pay-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;"><i class="ri-bank-line"></i> Banking</span>`;
+        }
+        const isPaid = o.paymentStatus === 'paid';
+        const payStatusBadge = isPaid
+            ? `<div style="font-size: 0.72rem; color: #16a34a; font-weight: 700; margin-top: 3px;"><i class="ri-checkbox-circle-fill"></i> Đã thanh toán</div>`
+            : `<div style="font-size: 0.72rem; color: #d97706; font-weight: 700; margin-top: 3px;"><i class="ri-time-line"></i> Chưa thanh toán</div>`;
+        const ghnStatusInfo = o.ghnStatus ? (GHN_STATUS_MAP[o.ghnStatus] || { label: o.ghnStatus, color: '#0369a1', bg: '#e0f2fe' }) : null;
+        const ghnInfo = o.ghnOrderCode
+            ? `<div style="margin-top: 5px;">
+           <a href="https://tracking.ghn.vn/?order_code=${o.ghnOrderCode}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;background:#fff7ed;color:#c2410c;border:1px solid #fdba74;padding:2px 6px;border-radius:4px;text-decoration:none;font-weight:600;" title="Tra cứu vận đơn GHN">
+             <i class="ri-truck-line"></i> GHN: ${o.ghnOrderCode}
+           </a>
+           ${ghnStatusInfo ? `<div style="font-size: 0.68rem; color: ${ghnStatusInfo.color}; font-weight: 600; margin-top: 2px;"><i class="ri-radar-line"></i> ${ghnStatusInfo.label}</div>` : ''}
+         </div>`
+            : '';
         return `
       <tr>
         <td style="font-weight: 700;">#${o.id}</td>
@@ -861,9 +952,16 @@ const renderOrders = () => {
         <td style="font-weight: 700; color: var(--text-main);">
           ${formatPrice(o.totalAmount)}
           ${o.voucherCode ? `<div style="font-size: 0.72rem; color: #16a34a; font-weight: 600; margin-top: 2px;"><i class="ri-coupon-3-line"></i> ${o.voucherCode} (-${formatPrice(o.discountAmount || 0)})</div>` : ''}
+          ${o.shippingFee ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Ship: +${formatPrice(o.shippingFee)}</div>` : ''}
         </td>
-        <td><span class="pay-badge">${o.paymentMethod.toUpperCase()}</span></td>
-        <td><span class="order-status-badge ${s.class}">${s.label}</span></td>
+        <td>
+          ${methodBadge}
+          ${payStatusBadge}
+        </td>
+        <td>
+          <span class="order-status-badge ${s.class}">${s.label}</span>
+          ${ghnInfo}
+        </td>
         <td style="font-size: 0.8125rem; color: var(--text-muted);">${formatDate(o.createdAt)}</td>
         <td>
           <div style="display: flex; gap: 6px;">
@@ -973,9 +1071,19 @@ const showOrderDetail = (order) => {
               <label class="form-label" style="font-size: 0.8125rem;">Phương thức thanh toán</label>
               <select id="editPaymentMethodSelect" class="form-select form-select-sm">
                 <option value="cod" ${order.paymentMethod === 'cod' ? 'selected' : ''}>Thanh toán khi nhận hàng (COD)</option>
+                <option value="sepay" ${order.paymentMethod === 'sepay' || order.paymentMethod === 'vietqr' ? 'selected' : ''}>SePay (VietQR)</option>
+                <option value="momo" ${order.paymentMethod === 'momo' ? 'selected' : ''}>Ví điện tử MoMo</option>
                 <option value="banking" ${order.paymentMethod === 'banking' ? 'selected' : ''}>Chuyển khoản ngân hàng</option>
                 <option value="vnpay" ${order.paymentMethod === 'vnpay' ? 'selected' : ''}>Cổng thanh toán VNPAY</option>
-                <option value="momo" ${order.paymentMethod === 'momo' ? 'selected' : ''}>Ví điện tử MoMo</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8125rem;">Trạng thái thanh toán</label>
+              <select id="editPaymentStatusSelect" class="form-select form-select-sm">
+                <option value="pending" ${order.paymentStatus === 'pending' || !order.paymentStatus ? 'selected' : ''}>Chờ thanh toán (Pending)</option>
+                <option value="paid" ${order.paymentStatus === 'paid' ? 'selected' : ''}>Đã thanh toán (Paid)</option>
+                <option value="failed" ${order.paymentStatus === 'failed' ? 'selected' : ''}>Thất bại (Failed)</option>
+                <option value="refunded" ${order.paymentStatus === 'refunded' ? 'selected' : ''}>Hoàn tiền (Refunded)</option>
               </select>
             </div>
             <div style="background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-light); margin-top: 4px;">
@@ -983,6 +1091,12 @@ const showOrderDetail = (order) => {
                 <span>Tiền hàng:</span>
                 <span>${formatPrice(totalAmount)}</span>
               </div>
+              ${order.shippingFee ? `
+                <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 2px;">
+                  <span>Phí giao hàng (GHN):</span>
+                  <span>+${formatPrice(order.shippingFee)}</span>
+                </div>
+              ` : ''}
               ${order.voucherCode ? `
                 <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; color: #16a34a; font-weight: 600; margin-bottom: 2px;">
                   <span><i class="ri-coupon-3-line"></i> Mã voucher (${order.voucherCode}):</span>
@@ -991,11 +1105,90 @@ const showOrderDetail = (order) => {
               ` : ''}
               <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; color: var(--text-muted); padding-top: 4px; border-top: 1px dashed var(--border-light); align-items: baseline;">
                 <span style="font-weight: 700;">Tổng thanh toán:</span>
-                <span id="editOrderTotalBadge" style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">${formatPrice(finalAmount)}</span>
+                <span id="editOrderTotalBadge" style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">${formatPrice(finalAmount + (Number(order.shippingFee) || 0))}</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="order-edit-section" style="margin-bottom: 20px; background: #fffaf0; border: 1px solid #feebc8; border-radius: 8px; padding: 14px 18px;">
+        <div class="order-edit-title" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #fed7aa; padding-bottom: 8px;">
+          <span style="color: #c2410c; font-weight: 700; font-size: 0.95rem;"><i class="ri-truck-line"></i> Vận Đơn Giao Hàng Nhanh (GHN)</span>
+          ${order.ghnOrderCode ? `
+            <a href="https://tracking.ghn.vn/?order_code=${order.ghnOrderCode}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline" style="border-color: #ea580c; color: #ea580c; text-decoration: none; padding: 3px 8px; font-size: 0.75rem;">
+              <i class="ri-external-link-line"></i> Tra cứu vận đơn GHN
+            </a>
+          ` : ''}
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 0.8125rem;">
+          <div>
+            <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Mã vận đơn GHN:</span>
+            <strong style="color: #ea580c; font-size: 0.95rem;">${order.ghnOrderCode || 'Chưa tạo vận đơn'}</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Trạng thái vận chuyển GHN:</span>
+            <span>
+              ${order.ghnStatus ? `
+                <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; background: ${GHN_STATUS_MAP[order.ghnStatus]?.bg || '#e0f2fe'}; color: ${GHN_STATUS_MAP[order.ghnStatus]?.color || '#0284c7'};">
+                  ${GHN_STATUS_MAP[order.ghnStatus]?.label || order.ghnStatus}
+                </span>
+              ` : '<span style="color: var(--text-muted);">Chưa có</span>'}
+            </span>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Cước vận chuyển:</span>
+            <strong>${order.shippingFee ? formatPrice(order.shippingFee) : '0 ₫'}</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Giao dự kiến:</span>
+            <strong>${order.ghnExpectedDelivery ? formatDate(order.ghnExpectedDelivery) : 'Đang cập nhật'}</strong>
+          </div>
+        </div>
+        ${order.ghnOrderCode ? `
+          <div style="margin-top: 12px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; border-top: 1px dashed #fed7aa; padding-top: 10px;">
+            <button type="button" id="adminSyncGhnBtn" class="btn btn-sm btn-outline" style="border-color: #2563eb; color: #2563eb; font-weight: 600; padding: 4px 12px;">
+              <i class="ri-refresh-line"></i> Đồng bộ trạng thái từ GHN
+            </button>
+          </div>
+        ` : `
+          <div style="margin-top: 14px; border-top: 1px dashed #fed7aa; padding-top: 14px;">
+            <div style="font-weight: 700; color: #9a3412; font-size: 0.85rem; margin-bottom: 8px;">
+              <i class="ri-scales-3-line"></i> Thông số kiện hàng & Trọng lượng gửi GHN:
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 12px;">
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 3px;">Trọng lượng (gram):</label>
+                <input type="number" id="adminGhnWeight" class="form-input form-input-sm" value="${Math.max(100, currentItems.reduce((acc, it) => acc + (Number(it.weight) || 300) * (it.quantity || 1), 0))}" min="50" step="50" style="width: 100%;">
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 3px;">Dài (cm):</label>
+                <input type="number" id="adminGhnLength" class="form-input form-input-sm" value="20" min="1" style="width: 100%;">
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 3px;">Rộng (cm):</label>
+                <input type="number" id="adminGhnWidth" class="form-input form-input-sm" value="15" min="1" style="width: 100%;">
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 3px;">Cao (cm):</label>
+                <input type="number" id="adminGhnHeight" class="form-input form-input-sm" value="10" min="1" style="width: 100%;">
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin: 0;">Lưu ý giao hàng:</label>
+                <select id="adminGhnRequiredNote" class="form-select form-select-sm" style="font-size: 0.75rem; padding: 3px 8px; width: auto;">
+                  <option value="CHOXEMHANGKHONGTHU">Cho xem hàng không cho thử</option>
+                  <option value="CHOXEMHANG">Cho xem hàng và cho thử</option>
+                  <option value="KHONGCHOXEMHANG">Không cho xem hàng</option>
+                </select>
+              </div>
+              <button type="button" id="adminCreateGhnBtn" class="btn btn-sm btn-primary" style="background: #ea580c; border-color: #ea580c; white-space: nowrap;">
+                <i class="ri-truck-line"></i> Tạo vận đơn GHN
+              </button>
+            </div>
+          </div>
+        `}
       </div>
 
       <!-- Section: Chỉnh sửa các món trong đơn hàng -->
@@ -1251,6 +1444,86 @@ const showOrderDetail = (order) => {
                 modal.classList.remove('active');
             });
         });
+        const syncGhnBtn = document.getElementById('adminSyncGhnBtn');
+        if (syncGhnBtn) {
+            syncGhnBtn.addEventListener('click', async () => {
+                syncGhnBtn.setAttribute('disabled', 'true');
+                syncGhnBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang đồng bộ...`;
+                try {
+                    const res = await fetch(`${API_BASE}/api/orders/${order.id}/ghn/sync`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${state.token}`
+                        }
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        order.ghnStatus = result.data?.ghnStatus || order.ghnStatus;
+                        order.ghnExpectedDelivery = result.data?.ghnExpectedDelivery || order.ghnExpectedDelivery;
+                        showToast('Thành công', result.message || 'Đã đồng bộ trạng thái mới nhất từ GHN', 'success');
+                        renderModalContent();
+                        loadOrders();
+                    }
+                    else {
+                        showToast('Lỗi đồng bộ', result.message || 'Không thể đồng bộ từ GHN', 'error');
+                        syncGhnBtn.removeAttribute('disabled');
+                        syncGhnBtn.innerHTML = `<i class="ri-refresh-line"></i> Đồng bộ trạng thái từ GHN`;
+                    }
+                }
+                catch {
+                    showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                    syncGhnBtn.removeAttribute('disabled');
+                    syncGhnBtn.innerHTML = `<i class="ri-refresh-line"></i> Đồng bộ trạng thái từ GHN`;
+                }
+            });
+        }
+        const createGhnBtn = document.getElementById('adminCreateGhnBtn');
+        if (createGhnBtn) {
+            createGhnBtn.addEventListener('click', async () => {
+                const weightInput = document.getElementById('adminGhnWeight');
+                const lengthInput = document.getElementById('adminGhnLength');
+                const widthInput = document.getElementById('adminGhnWidth');
+                const heightInput = document.getElementById('adminGhnHeight');
+                const reqNoteSelect = document.getElementById('adminGhnRequiredNote');
+                const weight = weightInput ? Number(weightInput.value) || 300 : 300;
+                const length = lengthInput ? Number(lengthInput.value) || 20 : 20;
+                const width = widthInput ? Number(widthInput.value) || 15 : 15;
+                const height = heightInput ? Number(heightInput.value) || 10 : 10;
+                const required_note = reqNoteSelect ? reqNoteSelect.value : 'CHOXEMHANGKHONGTHU';
+                createGhnBtn.setAttribute('disabled', 'true');
+                createGhnBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang tạo vận đơn GHN...`;
+                try {
+                    const res = await fetch(`${API_BASE}/api/orders/${order.id}/ghn/create`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${state.token}`
+                        },
+                        body: JSON.stringify({ weight, length, width, height, required_note })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        showToast('Thành công', `Đã tạo vận đơn GHN: ${result.data?.ghnOrderCode || ''}`, 'success');
+                        order.ghnOrderCode = result.data?.ghnOrderCode;
+                        order.ghnStatus = result.data?.ghnStatus || 'ready_to_pick';
+                        order.ghnExpectedDelivery = result.data?.ghnExpectedDelivery;
+                        renderModalContent();
+                        loadOrders();
+                    }
+                    else {
+                        showToast('Lỗi GHN', result.message || 'Không thể tạo vận đơn GHN', 'error');
+                        createGhnBtn.removeAttribute('disabled');
+                        createGhnBtn.innerHTML = `<i class="ri-truck-line"></i> Tạo vận đơn GHN`;
+                    }
+                }
+                catch {
+                    showToast('Lỗi', 'Không thể kết nối dịch vụ GHN', 'error');
+                    createGhnBtn.removeAttribute('disabled');
+                    createGhnBtn.innerHTML = `<i class="ri-truck-line"></i> Tạo vận đơn GHN`;
+                }
+            });
+        }
         const saveBtn = document.getElementById('saveOrderChangesBtn');
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
@@ -1259,6 +1532,7 @@ const showOrderDetail = (order) => {
                 const shippingAddress = document.getElementById('editShippingAddress')?.value.trim() || '';
                 const status = document.getElementById('editStatusSelect')?.value || order.status;
                 const paymentMethod = document.getElementById('editPaymentMethodSelect')?.value || order.paymentMethod;
+                const paymentStatus = document.getElementById('editPaymentStatusSelect')?.value || order.paymentStatus || 'pending';
                 if (!customerName || !customerPhone || !shippingAddress) {
                     showToast('Lỗi', 'Vui lòng điền đầy đủ họ tên, điện thoại và địa chỉ giao hàng', 'error');
                     return;
@@ -1281,6 +1555,7 @@ const showOrderDetail = (order) => {
                             customerPhone,
                             shippingAddress,
                             paymentMethod,
+                            paymentStatus,
                             status,
                             voucherCode: order.voucherCode,
                             discountAmount: order.discountAmount,
@@ -1412,6 +1687,9 @@ const openEditProductModal = (p) => {
         imgInput.value = p.imageUrl;
     if (descInput)
         descInput.value = p.description || '';
+    const weightInput = document.getElementById('prodWeightInput');
+    if (weightInput)
+        weightInput.value = (p.weight || 300).toString();
     if (title)
         title.textContent = 'Chỉnh Sửa Sản Phẩm';
     if (btnText)

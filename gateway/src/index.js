@@ -59,7 +59,7 @@ app.use(
   createProxyMiddleware({
     target: config.services.order,
     changeOrigin: true,
-    pathFilter: ['/api/orders', '/api/cart']
+    pathFilter: ['/api/orders', '/api/cart', '/payment']
   })
 );
 
@@ -133,6 +133,11 @@ const getClientShell = () => `<!DOCTYPE html>
 
 app.get(['/admin', '/admin/*'], (req, res) => {
   res.type('html').send(getAdminShell());
+});
+
+app.get('/orders/momo-callback', (req, res) => {
+  const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(`/api/orders/payment/momo/callback${query}`);
 });
 
 app.use(express.static(path.join(__dirname, '../../client')));

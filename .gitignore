@@ -22,5 +22,9 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Reports & Presentations
-BaoCao_ThanhPhan_KienTruc/
+# Reports & Presentations & Docs
+BaoCao_*
+*.docx
+*.pdf
+baitapkhongupgithub/
+docs/

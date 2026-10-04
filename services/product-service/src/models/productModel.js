@@ -421,6 +421,9 @@ const initDb = async () => {
     if (!colNames.includes('flashsalediscount')) {
       await pool.query('ALTER TABLE products ADD COLUMN flashSaleDiscount INT DEFAULT 0');
     }
+    if (!colNames.includes('weight')) {
+      await pool.query('ALTER TABLE products ADD COLUMN weight INT DEFAULT 300');
+    }
   } catch (err) {}
 
   await pool.query(`
@@ -563,6 +566,7 @@ const findAll = async ({ category, search, minPrice, maxPrice, sort, flashSale, 
     const variants = allVariants.filter((v) => v.productId === r.id);
     return {
       ...r,
+      weight: Number(r.weight) || 300,
       featured: Boolean(r.featured),
       isFlashSale: Boolean(r.isFlashSale),
       flashSaleDiscount: Number(r.flashSaleDiscount || 0),
@@ -578,6 +582,7 @@ const findById = async (id) => {
   const variants = await getVariantsByProductId(id);
   return {
     ...rows[0],
+    weight: Number(rows[0].weight) || 300,
     featured: Boolean(rows[0].featured),
     isFlashSale: Boolean(rows[0].isFlashSale),
     flashSaleDiscount: Number(rows[0].flashSaleDiscount || 0),
@@ -600,11 +605,12 @@ const create = async (productData) => {
   const featured = productData.featured ? 1 : 0;
   const isFlashSale = productData.isFlashSale ? 1 : 0;
   const flashSaleDiscount = Number(productData.flashSaleDiscount || 0);
+  const weight = Number(productData.weight) || 300;
 
   await db.query(
-    `INSERT INTO products (id, name, categoryId, categoryName, price, originalPrice, stock, rating, soldCount, imageUrl, description, featured, isFlashSale, flashSaleDiscount, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, NOW())`,
-    [id, productData.name, productData.categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount]
+    `INSERT INTO products (id, name, categoryId, categoryName, price, originalPrice, stock, rating, soldCount, imageUrl, description, featured, isFlashSale, flashSaleDiscount, weight, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, NOW())`,
+    [id, productData.name, productData.categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, weight]
   );
 
   if (productData.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
@@ -677,11 +683,12 @@ const update = async (id, updateData) => {
   const featured = updateData.featured !== undefined ? (updateData.featured ? 1 : 0) : (current.featured ? 1 : 0);
   const isFlashSale = updateData.isFlashSale !== undefined ? (updateData.isFlashSale ? 1 : 0) : (current.isFlashSale ? 1 : 0);
   const flashSaleDiscount = updateData.flashSaleDiscount !== undefined ? Number(updateData.flashSaleDiscount) : current.flashSaleDiscount;
+  const weight = updateData.weight !== undefined ? Number(updateData.weight) : (current.weight || 300);
 
   await db.query(
-    `UPDATE products SET name = ?, categoryId = ?, categoryName = ?, price = ?, originalPrice = ?, stock = ?, rating = ?, imageUrl = ?, description = ?, featured = ?, isFlashSale = ?, flashSaleDiscount = ?
+    `UPDATE products SET name = ?, categoryId = ?, categoryName = ?, price = ?, originalPrice = ?, stock = ?, rating = ?, imageUrl = ?, description = ?, featured = ?, isFlashSale = ?, flashSaleDiscount = ?, weight = ?
      WHERE id = ?`,
-    [name, categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, id]
+    [name, categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, weight, id]
   );
 
   if (updateData.variants && Array.isArray(updateData.variants)) {

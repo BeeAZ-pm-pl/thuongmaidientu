@@ -348,3 +348,122 @@
     padding: 36px 28px;
   }
 }
+
+/* OTP Verification Styles */
+.otp-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.otp-icon-header {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  border: 1px solid #bfdbfe;
+}
+
+.otp-target-desc {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.otp-target-email {
+  color: #1e293b;
+  font-weight: 700;
+  display: inline-block;
+  word-break: break-all;
+}
+
+.otp-code-input {
+  width: 100%;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: 10px;
+  text-align: center;
+  padding: 14px 16px;
+  border: 2px solid #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  outline: none;
+  transition: all var(--transition-fast);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.otp-code-input:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.otp-countdown-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 16px 0 20px;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.otp-countdown-badge {
+  font-weight: 700;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.otp-resend-row {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.otp-resend-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 4px;
+  text-decoration: underline;
+  font-size: 0.875rem;
+}
+
+.otp-resend-btn:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.otp-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.875rem;
+  color: #64748b;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-weight: 600;
+  justify-content: center;
+  width: 100%;
+}
+
+.otp-back-link:hover {
+  color: #0f172a;
+}
+
