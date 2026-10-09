@@ -15,6 +15,7 @@ backups/
 **/backups/
 scratch/
 *.log
+vps_config.json
 
 # OS & Editor files
 .DS_Store
@@ -22,5 +23,9 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Reports & Presentations
-BaoCao_ThanhPhan_KienTruc/
+# Reports & Presentations & Docs
+BaoCao_*
+*.docx
+*.pdf
+baitapkhongupgithub/
+docs/

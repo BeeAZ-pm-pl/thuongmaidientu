@@ -515,3 +515,29 @@ input, select, textarea {
   margin: 0;
 }
 
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+  .container {
+    padding: 0 12px;
+  }
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.875rem;
+  }
+  .btn-lg {
+    padding: 10px 18px;
+    font-size: 0.95rem;
+  }
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100vw - 24px);
+  }
+}
+
+

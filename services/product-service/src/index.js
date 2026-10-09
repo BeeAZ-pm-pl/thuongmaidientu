@@ -14,7 +14,14 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/categories', productController.getCategories);
+app.post('/api/categories', productController.createCategory);
+app.put('/api/categories/:id', productController.updateCategory);
+app.delete('/api/categories/:id', productController.deleteCategory);
+
 app.get('/categories', productController.getCategories);
+app.post('/categories', productController.createCategory);
+app.put('/categories/:id', productController.updateCategory);
+app.delete('/categories/:id', productController.deleteCategory);
 
 app.use('/api/products', productRoutes);
 app.use('/', productRoutes);

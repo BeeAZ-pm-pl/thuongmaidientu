@@ -421,6 +421,9 @@ const initDb = async () => {
     if (!colNames.includes('flashsalediscount')) {
       await pool.query('ALTER TABLE products ADD COLUMN flashSaleDiscount INT DEFAULT 0');
     }
+    if (!colNames.includes('weight')) {
+      await pool.query('ALTER TABLE products ADD COLUMN weight INT DEFAULT 300');
+    }
   } catch (err) {}
 
   await pool.query(`
@@ -499,6 +502,45 @@ const getCategories = async () => {
   return rows;
 };
 
+const createCategory = async ({ id, name, icon }) => {
+  const db = await initDb();
+  const catId = id ? String(id).trim().toLowerCase() : `cat_${Date.now()}`;
+  const catName = String(name || '').trim();
+  const catIcon = String(icon || 'ri-folder-line').trim();
+  if (!catName) throw new Error('Tên danh mục không được để trống');
+  await db.query(
+    'INSERT INTO categories (id, name, icon) VALUES (?, ?, ?)',
+    [catId, catName, catIcon]
+  );
+  return { id: catId, name: catName, icon: catIcon };
+};
+
+const updateCategory = async (id, { name, icon }) => {
+  const db = await initDb();
+  const [existing] = await db.query('SELECT * FROM categories WHERE id = ?', [id]);
+  if (existing.length === 0) throw new Error('Không tìm thấy danh mục');
+  const catName = name !== undefined ? String(name).trim() : existing[0].name;
+  const catIcon = icon !== undefined ? String(icon).trim() : existing[0].icon;
+  await db.query(
+    'UPDATE categories SET name = ?, icon = ? WHERE id = ?',
+    [catName, catIcon, id]
+  );
+  if (name !== undefined) {
+    await db.query('UPDATE products SET categoryName = ? WHERE categoryId = ?', [catName, id]);
+  }
+  return { id, name: catName, icon: catIcon };
+};
+
+const deleteCategory = async (id) => {
+  const db = await initDb();
+  const [prods] = await db.query('SELECT COUNT(*) as count FROM products WHERE categoryId = ?', [id]);
+  if (prods.length > 0 && prods[0].count > 0) {
+    throw new Error(`Không thể xóa danh mục này vì đang có ${prods[0].count} sản phẩm thuộc danh mục`);
+  }
+  await db.query('DELETE FROM categories WHERE id = ?', [id]);
+  return true;
+};
+
 const getVariantsByProductId = async (productId) => {
   const db = await initDb();
   const [rows] = await db.query('SELECT * FROM product_variants WHERE productId = ? ORDER BY price ASC', [productId]);
@@ -563,6 +605,7 @@ const findAll = async ({ category, search, minPrice, maxPrice, sort, flashSale, 
     const variants = allVariants.filter((v) => v.productId === r.id);
     return {
       ...r,
+      weight: Number(r.weight) || 300,
       featured: Boolean(r.featured),
       isFlashSale: Boolean(r.isFlashSale),
       flashSaleDiscount: Number(r.flashSaleDiscount || 0),
@@ -578,6 +621,7 @@ const findById = async (id) => {
   const variants = await getVariantsByProductId(id);
   return {
     ...rows[0],
+    weight: Number(rows[0].weight) || 300,
     featured: Boolean(rows[0].featured),
     isFlashSale: Boolean(rows[0].isFlashSale),
     flashSaleDiscount: Number(rows[0].flashSaleDiscount || 0),
@@ -593,18 +637,22 @@ const create = async (productData) => {
   const id = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const price = Number(productData.price);
   const originalPrice = Number(productData.originalPrice || productData.price);
-  const stock = Number(productData.stock || 0);
+  let stock = Number(productData.stock || 0);
+  if (productData.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
+    stock = productData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  }
   const rating = Number(productData.rating || 5.0);
   const imageUrl = productData.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80';
   const description = productData.description || '';
   const featured = productData.featured ? 1 : 0;
   const isFlashSale = productData.isFlashSale ? 1 : 0;
   const flashSaleDiscount = Number(productData.flashSaleDiscount || 0);
+  const weight = Number(productData.weight) || 300;
 
   await db.query(
-    `INSERT INTO products (id, name, categoryId, categoryName, price, originalPrice, stock, rating, soldCount, imageUrl, description, featured, isFlashSale, flashSaleDiscount, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, NOW())`,
-    [id, productData.name, productData.categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount]
+    `INSERT INTO products (id, name, categoryId, categoryName, price, originalPrice, stock, rating, soldCount, imageUrl, description, featured, isFlashSale, flashSaleDiscount, weight, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, NOW())`,
+    [id, productData.name, productData.categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, weight]
   );
 
   if (productData.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
@@ -613,7 +661,7 @@ const create = async (productData) => {
       await db.query(
         `INSERT INTO product_variants (id, productId, color, type, price, originalPrice, stock, imageUrl)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [varId, id, v.color || 'Tiêu chuẩn', v.type || 'Tiêu chuẩn', Number(v.price) || price, Number(v.originalPrice) || originalPrice || price, Number(v.stock) || stock, v.imageUrl || imageUrl]
+        [varId, id, v.color || 'Tiêu chuẩn', v.type || 'Tiêu chuẩn', Number(v.price) || price, Number(v.originalPrice) || originalPrice || price, Number(v.stock) || 0, v.imageUrl || imageUrl]
       );
     }
   } else {
@@ -635,6 +683,7 @@ const updateVariants = async (productId, variants) => {
 
   if (Array.isArray(variants)) {
     await db.query('DELETE FROM product_variants WHERE productId = ?', [productId]);
+    let totalStock = 0;
     for (const v of variants) {
       const varId = v.id && !String(v.id).startsWith('temp_') ? v.id : `var_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
       const color = v.color || 'Tiêu chuẩn';
@@ -642,12 +691,16 @@ const updateVariants = async (productId, variants) => {
       const vPrice = Number(v.price) || current.price;
       const vOrigPrice = Number(v.originalPrice) || current.originalPrice || vPrice;
       const vStock = Number(v.stock) || 0;
+      totalStock += vStock;
       const vImg = v.imageUrl || current.imageUrl;
       await db.query(
         `INSERT INTO product_variants (id, productId, color, type, price, originalPrice, stock, imageUrl)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [varId, productId, color, type, vPrice, vOrigPrice, vStock, vImg]
       );
+    }
+    if (variants.length > 0) {
+      await db.query('UPDATE products SET stock = ? WHERE id = ?', [totalStock, productId]);
     }
   }
 
@@ -666,22 +719,27 @@ const update = async (id, updateData) => {
     if (matched) categoryName = matched.name;
   }
 
+  let stock = updateData.stock !== undefined ? Number(updateData.stock) : current.stock;
+  if (updateData.variants && Array.isArray(updateData.variants) && updateData.variants.length > 0) {
+    stock = updateData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  }
+
   const name = updateData.name !== undefined ? updateData.name : current.name;
   const categoryId = updateData.categoryId !== undefined ? updateData.categoryId : current.categoryId;
   const price = updateData.price !== undefined ? Number(updateData.price) : current.price;
   const originalPrice = updateData.originalPrice !== undefined ? Number(updateData.originalPrice) : current.originalPrice;
-  const stock = updateData.stock !== undefined ? Number(updateData.stock) : current.stock;
   const rating = updateData.rating !== undefined ? Number(updateData.rating) : current.rating;
   const imageUrl = updateData.imageUrl !== undefined ? updateData.imageUrl : current.imageUrl;
   const description = updateData.description !== undefined ? updateData.description : current.description;
   const featured = updateData.featured !== undefined ? (updateData.featured ? 1 : 0) : (current.featured ? 1 : 0);
   const isFlashSale = updateData.isFlashSale !== undefined ? (updateData.isFlashSale ? 1 : 0) : (current.isFlashSale ? 1 : 0);
   const flashSaleDiscount = updateData.flashSaleDiscount !== undefined ? Number(updateData.flashSaleDiscount) : current.flashSaleDiscount;
+  const weight = updateData.weight !== undefined ? Number(updateData.weight) : (current.weight || 300);
 
   await db.query(
-    `UPDATE products SET name = ?, categoryId = ?, categoryName = ?, price = ?, originalPrice = ?, stock = ?, rating = ?, imageUrl = ?, description = ?, featured = ?, isFlashSale = ?, flashSaleDiscount = ?
+    `UPDATE products SET name = ?, categoryId = ?, categoryName = ?, price = ?, originalPrice = ?, stock = ?, rating = ?, imageUrl = ?, description = ?, featured = ?, isFlashSale = ?, flashSaleDiscount = ?, weight = ?
      WHERE id = ?`,
-    [name, categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, id]
+    [name, categoryId, categoryName, price, originalPrice, stock, rating, imageUrl, description, featured, isFlashSale, flashSaleDiscount, weight, id]
   );
 
   if (updateData.variants && Array.isArray(updateData.variants)) {
@@ -775,6 +833,42 @@ const getReviewsByProductId = async (productId) => {
   };
 };
 
+const hasUserPurchasedProduct = async (userId, productId) => {
+  if (!userId || userId === 'guest') return false;
+  const db = await initDb();
+  try {
+    const [orders] = await db.query(
+      `SELECT items, status FROM orders WHERE userId = ? AND status != 'cancelled'`,
+      [String(userId)]
+    );
+    for (const order of orders) {
+      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      if (Array.isArray(items)) {
+        const found = items.some(i => String(i.productId) === String(productId));
+        if (found) return true;
+      }
+    }
+    return false;
+  } catch (err) {
+    console.error('Lỗi kiểm tra lịch sử mua hàng:', err);
+    return false;
+  }
+};
+
+const getUserProductReview = async (userId, productId) => {
+  if (!userId) return null;
+  const db = await initDb();
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM product_reviews WHERE userId = ? AND productId = ? LIMIT 1`,
+      [String(userId), String(productId)]
+    );
+    return rows.length > 0 ? rows[0] : null;
+  } catch {
+    return null;
+  }
+};
+
 const addReview = async ({ productId, userId, userName, userAvatar, rating, comment, isBuyer }) => {
   const db = await initDb();
   const id = `rev_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -803,12 +897,83 @@ const addReview = async ({ productId, userId, userName, userAvatar, rating, comm
   return created[0];
 };
 
+const getAllReviews = async (filters = {}) => {
+  const db = await initDb();
+  let query = `
+    SELECT r.*, p.name as productName, p.imageUrl as productImageUrl, p.categoryName
+    FROM product_reviews r
+    LEFT JOIN products p ON r.productId = p.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (filters.rating) {
+    query += ' AND r.rating = ?';
+    params.push(parseInt(filters.rating, 10));
+  }
+  if (filters.productId) {
+    query += ' AND r.productId = ?';
+    params.push(filters.productId);
+  }
+  if (filters.keyword) {
+    query += ' AND (r.userName LIKE ? OR r.comment LIKE ? OR p.name LIKE ?)';
+    const kw = `%${filters.keyword}%`;
+    params.push(kw, kw, kw);
+  }
+
+  query += ' ORDER BY r.createdAt DESC';
+
+  const [rows] = await db.query(query, params);
+  return rows;
+};
+
+const replyReview = async (reviewId, replyComment) => {
+  const db = await initDb();
+  await db.query(
+    'UPDATE product_reviews SET replyComment = ? WHERE id = ?',
+    [replyComment.trim(), reviewId]
+  );
+  const [rows] = await db.query('SELECT * FROM product_reviews WHERE id = ?', [reviewId]);
+  return rows[0] || null;
+};
+
+const deleteReview = async (reviewId) => {
+  const db = await initDb();
+  const [target] = await db.query('SELECT productId FROM product_reviews WHERE id = ?', [reviewId]);
+  if (target.length === 0) return false;
+  const productId = target[0].productId;
+
+  await db.query('DELETE FROM product_reviews WHERE id = ?', [reviewId]);
+
+  // Recalculate average rating for the product
+  const [statRows] = await db.query(
+    'SELECT AVG(rating) as avgRating, COUNT(*) as count FROM product_reviews WHERE productId = ?',
+    [productId]
+  );
+  if (statRows.length > 0 && statRows[0].count > 0) {
+    const newRating = parseFloat(Number(statRows[0].avgRating).toFixed(1));
+    await db.query('UPDATE products SET rating = ? WHERE id = ?', [newRating, productId]);
+  } else {
+    await db.query('UPDATE products SET rating = 5.0 WHERE id = ?', [productId]);
+  }
+
+  return true;
+};
+
 module.exports = {
   initDb,
   getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   getVariantsByProductId,
   getReviewsByProductId,
+  getAllReviews,
+  replyReview,
+  deleteReview,
   addReview,
+  hasUserPurchasedProduct,
+  getUserProductReview,
   findAll,
   findById,
   create,
@@ -817,3 +982,4 @@ module.exports = {
   remove,
   deductStock
 };
+
