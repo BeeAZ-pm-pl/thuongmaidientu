@@ -11,7 +11,8 @@
     "start:notification": "node services/notification-service/src/index.js",
     "start:chat": "node services/chat-service/dist/index.js",
     "start": "docker compose up --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "sync:vps": "python sync_vps.py"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

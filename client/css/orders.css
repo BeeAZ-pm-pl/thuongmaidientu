@@ -383,15 +383,72 @@
 }
 
 @media (max-width: 768px) {
-  .order-card-bottom {
+  .orders-container {
+    padding: 0 10px;
+    margin: 16px auto;
+  }
+  .orders-header-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 14px;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .orders-title {
+    font-size: 1.25rem;
+  }
+  .orders-search-wrapper {
+    max-width: 100%;
+  }
+  .order-tabs-nav {
+    margin-bottom: 16px;
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .order-tab-btn {
+    min-width: 110px;
+    padding: 10px 8px;
+    font-size: 0.8125rem;
+  }
+  .order-card {
+    border-radius: 10px;
+  }
+  .order-card-top {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .order-id-text {
+    font-size: 0.875rem;
+  }
+  .order-items-list {
+    padding: 8px 14px;
+  }
+  .order-item-entry {
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .order-item-thumb {
+    width: 48px;
+    height: 48px;
+  }
+  .order-item-name {
+    font-size: 0.85rem;
+    line-height: 1.35;
+  }
+  .order-card-bottom {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
   .order-card-bottom > div:last-child {
     justify-content: space-between;
     width: 100%;
   }
+  .order-total-group {
+    justify-content: space-between;
+    width: 100%;
+  }
 }
+
 
 

@@ -797,14 +797,128 @@
 
 @media (max-width: 768px) {
   .site-top-bar {
-    height: 32px;
-    font-size: 0.75rem;
+    display: none !important;
   }
-  .top-bar-left {
-    display: none;
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   }
-  .top-bar-right {
-    width: 100%;
-    justify-content: flex-end;
+
+  .nav-container {
+    height: auto !important;
+    padding: 8px 12px 10px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .brand-logo {
+    order: 1 !important;
+    font-size: 1.15rem !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .brand-icon {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 1.1rem !important;
+  }
+
+  .brand-badge {
+    display: none !important;
+  }
+
+  .nav-actions {
+    order: 2 !important;
+    margin-left: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .nav-actions .top-bar-link {
+    font-size: 0.75rem !important;
+    gap: 4px !important;
+  }
+
+  .nav-actions .top-bar-link span {
+    display: none !important;
+  }
+
+  .nav-actions .top-bar-link i {
+    font-size: 1.35rem !important;
+  }
+
+  .cart-btn-trigger {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.25rem !important;
+  }
+
+  .cart-count {
+    min-width: 17px !important;
+    height: 17px !important;
+    font-size: 0.625rem !important;
+    top: -2px !important;
+    right: -2px !important;
+  }
+
+  .search-container-group {
+    order: 3 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+    margin-top: 2px !important;
+  }
+
+  .search-bar-wrapper {
+    display: block !important;
+    width: 100% !important;
+    position: relative !important;
+  }
+
+  .search-input {
+    width: 100% !important;
+    height: 36px !important;
+    font-size: 0.84rem !important;
+    padding: 0 40px 0 14px !important;
+    border-radius: 999px !important;
+    background-color: #f1f5f9 !important;
+  }
+
+  .search-btn {
+    width: 28px !important;
+    height: 28px !important;
+    right: 4px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .search-hot-keywords {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    padding: 4px 0 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .search-hot-keywords::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .hot-keyword-tag {
+    font-size: 0.7rem !important;
+    padding: 2px 8px !important;
+    background: #f1f5f9 !important;
+    border-radius: 4px !important;
+    color: var(--text-muted) !important;
   }
 }
+

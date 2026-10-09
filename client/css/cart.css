@@ -189,6 +189,58 @@
 @media (max-width: 900px) {
   .cart-layout {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cart-header-container {
+    padding: 0 12px;
+  }
+  .cart-brand-group {
+    gap: 8px;
+  }
+  .cart-page-badge {
+    font-size: 0.9375rem;
+    padding-left: 8px;
+  }
+  .cart-main-container {
+    padding: 0 10px;
+    margin: 16px auto;
+  }
+  .cart-card-header {
+    padding: 12px 14px;
+    font-size: 0.875rem;
+  }
+  .cart-items-list {
+    padding: 6px 10px;
+  }
+  .cart-item-row {
+    gap: 10px;
+    padding: 12px 0;
+    align-items: flex-start;
+  }
+  .cart-row-img {
+    width: 60px;
+    height: 60px;
+  }
+  .cart-row-name {
+    font-size: 0.85rem;
+    line-height: 1.35;
+  }
+  .cart-row-price {
+    font-size: 0.9375rem;
+  }
+  .cart-row-controls {
+    margin-top: 6px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cart-checkout-card {
+    padding: 16px 12px;
+  }
+  .cart-breakdown-row.total {
+    font-size: 1.1rem;
   }
 }
 

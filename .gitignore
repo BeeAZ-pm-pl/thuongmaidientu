@@ -15,6 +15,7 @@ backups/
 **/backups/
 scratch/
 *.log
+vps_config.json
 
 # OS & Editor files
 .DS_Store

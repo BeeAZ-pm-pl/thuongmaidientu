@@ -490,6 +490,32 @@ const renderHeaderTemplate = (): string => {
                     <i class="ri-shopping-cart-2-line"></i>
                     <span id="cartCountBadge" class="cart-count">${cartCount}</span>
                 </a>
+                ${state.user ? `
+                <div class="top-user-menu mobile-user-menu" style="position: relative;">
+                    <button type="button" class="user-profile-trigger mobile-user-btn" id="mobileUserMenuBtn" title="Tài khoản: ${state.user.name}" style="background: none; border: 1px solid var(--border-light); padding: 4px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                        <i class="ri-user-smile-fill" style="color: #ee4d2d; font-size: 1.15rem;"></i>
+                        <span class="user-name-short" style="font-size: 0.8125rem; font-weight: 600; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${state.user.name}</span>
+                    </button>
+                    <div id="mobileUserDropdownMenu" class="user-dropdown-menu" style="position: absolute; right: 0; top: calc(100% + 8px); background: #ffffff; border: 1px solid var(--border-light); border-radius: 8px; box-shadow: var(--shadow-lg); width: 190px; z-index: 1000;">
+                        <div style="padding: 10px 14px; font-weight: 700; font-size: 0.8125rem; color: var(--text-main); border-bottom: 1px solid var(--border-light); background: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            👋 ${state.user.name}
+                        </div>
+                        <a href="/orders" class="user-dropdown-item" data-nav-link style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: var(--text-main); font-size: 0.8125rem;">
+                            <i class="ri-file-list-3-line"></i>
+                            <span>Đơn Mua Của Tôi</span>
+                        </a>
+                        <button type="button" class="user-dropdown-item mobile-logout-btn" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; color: #ef4444; width: 100%; border: none; background: none; text-align: left; cursor: pointer; font-size: 0.8125rem; border-top: 1px solid #f1f5f9;">
+                            <i class="ri-logout-box-r-line"></i>
+                            <span>Đăng Xuất</span>
+                        </button>
+                    </div>
+                </div>
+                ` : `
+                <a href="/login" class="top-bar-link" style="font-size: 0.8125rem; font-weight: 600; color: #ee4d2d; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" data-nav-link title="Đăng nhập tài khoản">
+                    <i class="ri-user-line" style="font-size: 1.2rem;"></i>
+                    <span>Đăng Nhập</span>
+                </a>
+                `}
             </div>
         </div>
     </header>
@@ -1656,6 +1682,52 @@ const renderCartView = (): string => {
 };
 
 const renderOrdersView = (): string => {
+    if (!state.user || !state.token) {
+        return `
+    <header style="background: #ffffff; border-bottom: 1px solid var(--border-light); padding: 16px 0; box-shadow: var(--shadow-sm);">
+        <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
+            <a href="/" class="brand-logo" data-nav-link>
+                <div class="brand-icon">
+                    <i class="ri-shopping-bag-3-fill"></i>
+                </div>
+                <span>NovaShop</span>
+            </a>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <a href="/login?redirect=/orders" class="btn btn-primary btn-sm" data-nav-link>
+                    <i class="ri-user-line"></i>
+                    <span>Đăng nhập</span>
+                </a>
+                <a href="/" class="btn btn-secondary btn-sm" data-nav-link>
+                    <i class="ri-store-2-line"></i>
+                    <span>Cửa hàng</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="orders-container" style="min-height: 55vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
+        <div style="background: #ffffff; border-radius: var(--radius-lg); padding: 48px 32px; text-align: center; border: 1px solid var(--border-light); max-width: 480px; width: 100%; box-shadow: var(--shadow-sm);">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem;">
+                <i class="ri-user-unfollow-line"></i>
+            </div>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Vui Lòng Đăng Nhập</h2>
+            <p style="font-size: 0.9375rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px;">Bạn cần đăng nhập tài khoản để xem lịch sử và quản lý đơn mua của mình.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="/login?redirect=/orders" class="btn btn-primary" data-nav-link style="justify-content: center; padding: 12px 20px; font-weight: 600;">
+                    <i class="ri-login-box-line"></i>
+                    <span>Đăng Nhập Ngay</span>
+                </a>
+                <a href="/" class="btn btn-secondary" data-nav-link style="justify-content: center; padding: 10px 20px;">
+                    <span>Về Trang Chủ</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    ${renderFooterTemplate()}
+    `;
+    }
+
     return `
     <header style="background: #ffffff; border-bottom: 1px solid var(--border-light); padding: 16px 0; box-shadow: var(--shadow-sm);">
         <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
@@ -2059,7 +2131,8 @@ const renderApp = (): void => {
 };
 
 const navigate = (path: string): void => {
-    if (window.location.pathname !== path) {
+    const currentFull = window.location.pathname + window.location.search;
+    if (currentFull !== path) {
         window.history.pushState(null, '', path);
     }
     state.currentRoute = path;
@@ -2078,17 +2151,25 @@ const bindGlobalNavigation = (): void => {
         });
     });
 
+    const handleLogout = (): void => {
+        localStorage.removeItem('novashop_customer_token');
+        localStorage.removeItem('novashop_customer_user');
+        state.token = '';
+        state.user = null;
+        state.orders = [];
+        state.appliedVoucher = null;
+        showToast('Thông báo', 'Đã đăng xuất tài khoản thành công', 'success');
+        navigate('/');
+    };
+
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('novashop_customer_token');
-            localStorage.removeItem('novashop_customer_user');
-            state.token = '';
-            state.user = null;
-            showToast('Thông báo', 'Đã đăng xuất tài khoản thành công', 'success');
-            navigate('/');
-        });
+        logoutBtn.addEventListener('click', handleLogout);
     }
+
+    document.querySelectorAll('.mobile-logout-btn').forEach((btn) => {
+        btn.addEventListener('click', handleLogout);
+    });
 
     const closeAllTopDropdowns = (): void => {
         const dropdowns = document.querySelectorAll('.top-dropdown-menu, .user-dropdown-menu');
@@ -2172,7 +2253,7 @@ const bindGlobalNavigation = (): void => {
         });
     });
 
-    // User profile dropdown
+    // User profile dropdown - desktop
     const userMenuBtn = document.getElementById('topUserMenuBtn');
     const userMenuDropdown = document.getElementById('topUserDropdownMenu');
     if (userMenuBtn && userMenuDropdown) {
@@ -2181,6 +2262,18 @@ const bindGlobalNavigation = (): void => {
             const isOpen = userMenuDropdown.classList.contains('show');
             closeAllTopDropdowns();
             if (!isOpen) userMenuDropdown.classList.add('show');
+        });
+    }
+
+    // User profile dropdown - mobile
+    const mobileUserMenuBtn = document.getElementById('mobileUserMenuBtn');
+    const mobileUserDropdownMenu = document.getElementById('mobileUserDropdownMenu');
+    if (mobileUserMenuBtn && mobileUserDropdownMenu) {
+        mobileUserMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = mobileUserDropdownMenu.classList.contains('show');
+            closeAllTopDropdowns();
+            if (!isOpen) mobileUserDropdownMenu.classList.add('show');
         });
     }
 
@@ -2543,7 +2636,7 @@ const renderCategories = (): void => {
     const allCat = [{ id: 'cat_all', name: 'Tất Cả Sản Phẩm' }, ...state.categories.filter(c => c.id !== 'cat_all')];
 
     tabsContainer.innerHTML = allCat.map((cat) => `
-        <button class="category-pill ${state.activeCategory === cat.id ? 'active' : ''}" data-cat-id="${cat.id}" type="button">
+        <button class="category-pill ${state.activeCategory === cat.id ? 'active' : ''}" data-cat-id="${cat.id}" data-category="${cat.id}" type="button">
             <span>${cat.name}</span>
         </button>
     `).join('');
@@ -2882,6 +2975,17 @@ const loadAndRenderProductReviews = async (productId: string | number): Promise<
             valHeader.textContent = stats.averageRating.toFixed(1);
         }
 
+        let eligibility = { canReview: false, reason: 'not_logged_in', hasReviewed: false, message: '' };
+        if (state.user && state.user.id) {
+            try {
+                const elRes = await fetch(`${API_BASE}/api/products/${productId}/review-eligibility?userId=${state.user.id}`);
+                const elData = await elRes.json();
+                if (elData.success) {
+                    eligibility = elData;
+                }
+            } catch {}
+        }
+
         let currentFilterStar = 0;
         let selectedFormStars = 5;
 
@@ -2898,6 +3002,74 @@ const loadAndRenderProductReviews = async (productId: string | number): Promise<
                 }
                 return html;
             };
+
+            let reviewFormHtml = '';
+            if (!state.user) {
+                reviewFormHtml = `
+                <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 22px; text-align: center; margin-bottom: 24px;">
+                    <i class="ri-user-shared-line" style="font-size: 2.2rem; color: #94a3b8; display: block; margin-bottom: 8px;"></i>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px;">Đăng Nhập Để Đánh Giá Sản Phẩm</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">Chỉ những khách hàng đã mua sản phẩm này tại NovaShop mới có thể gửi đánh giá.</div>
+                    <a href="/login" class="btn btn-primary btn-sm" data-nav-link style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="ri-login-box-line"></i> Đăng Nhập Ngay
+                    </a>
+                </div>
+                `;
+            } else if (eligibility.hasReviewed) {
+                reviewFormHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+                        <i class="ri-checkbox-circle-fill"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; color: #15803d; font-size: 0.9375rem;">Bạn Đã Đánh Giá Sản Phẩm Này</div>
+                        <div style="font-size: 0.8125rem; color: #166534; margin-top: 2px;">Cảm ơn bạn đã chia sẻ trải nghiệm thực tế để giúp đỡ các khách hàng khác của NovaShop!</div>
+                    </div>
+                </div>
+                `;
+            } else if (!eligibility.canReview) {
+                reviewFormHtml = `
+                <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 22px; text-align: center; margin-bottom: 24px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 1.5rem;">
+                        <i class="ri-shopping-bag-3-line"></i>
+                    </div>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px;">Bạn Chưa Mua Sản Phẩm Này</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto;">Để đảm bảo tính xác thực 100% của phần nhận xét, chỉ khách hàng đã từng đặt mua sản phẩm này tại NovaShop mới có thể gửi đánh giá.</div>
+                </div>
+                `;
+            } else {
+                reviewFormHtml = `
+                <div class="review-form-card">
+                    <div class="review-form-title">
+                        <i class="ri-edit-2-line" style="color: #ee4d2d;"></i>
+                        <span>Viết Đánh Giá Của Bạn Về Sản Phẩm</span>
+                        <span style="font-size: 0.75rem; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px; margin-left: 8px; font-weight: 600;">
+                            <i class="ri-checkbox-circle-fill"></i> Người mua đã xác thực
+                        </span>
+                    </div>
+                    <div class="review-star-picker">
+                        <span>Đánh giá:</span>
+                        <div id="interactiveStarPicker" style="display: flex; gap: 4px;">
+                            ${[1, 2, 3, 4, 5].map(st => `
+                                <i class="ri-star-fill star-interactive-item ${st <= selectedFormStars ? 'active' : ''}" data-val="${st}"></i>
+                            `).join('')}
+                        </div>
+                        <span id="starRatingLabel" style="font-weight: 700; color: #f59e0b; margin-left: 8px;">
+                            ${selectedFormStars === 5 ? 'Tuyệt vời' : selectedFormStars === 4 ? 'Rất tốt' : selectedFormStars === 3 ? 'Bình thường' : selectedFormStars === 2 ? 'Kém' : 'Rất tệ'}
+                        </span>
+                    </div>
+                    <div class="review-form-inputs">
+                        <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 4px;">
+                            <i class="ri-user-smile-line"></i> Người đánh giá: <strong style="color: var(--text-main);">${state.user.name}</strong>
+                        </div>
+                        <textarea id="reviewCommentInput" class="review-textarea" placeholder="Hãy chia sẻ nhận xét chi tiết về chất lượng sản phẩm, độ hoàn thiện, đóng gói và dịch vụ giao hàng..."></textarea>
+                        <button type="button" id="submitReviewBtn" class="review-submit-btn">
+                            <i class="ri-send-plane-fill"></i> Gửi Đánh Giá
+                        </button>
+                    </div>
+                </div>
+                `;
+            }
 
             container.innerHTML = `
                 <div class="novamall-rating-summary">
@@ -2933,38 +3105,7 @@ const loadAndRenderProductReviews = async (productId: string | number): Promise<
                     </div>
                 </div>
 
-                <div class="review-form-card">
-                    <div class="review-form-title">
-                        <i class="ri-edit-2-line" style="color: #ee4d2d;"></i>
-                        <span>Viết Đánh Giá Của Bạn Về Sản Phẩm</span>
-                    </div>
-                    <div class="review-star-picker">
-                        <span>Đánh giá:</span>
-                        <div id="interactiveStarPicker" style="display: flex; gap: 4px;">
-                            ${[1, 2, 3, 4, 5].map(st => `
-                                <i class="ri-star-fill star-interactive-item ${st <= selectedFormStars ? 'active' : ''}" data-val="${st}"></i>
-                            `).join('')}
-                        </div>
-                        <span id="starRatingLabel" style="font-weight: 700; color: #f59e0b; margin-left: 8px;">
-                            ${selectedFormStars === 5 ? 'Tuyệt vời' : selectedFormStars === 4 ? 'Rất tốt' : selectedFormStars === 3 ? 'Bình thường' : selectedFormStars === 2 ? 'Kém' : 'Rất tệ'}
-                        </span>
-                    </div>
-                    <div class="review-form-inputs">
-                        ${state.user ? `
-                            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 4px;">
-                                <i class="ri-user-smile-line"></i> Người đánh giá: <strong style="color: var(--text-main);">${state.user.name}</strong> (Tài khoản NovaShop)
-                            </div>
-                        ` : `
-                            <div style="margin-bottom: 6px;">
-                                <input type="text" id="reviewAuthorInput" class="form-input form-input-sm" placeholder="Họ và tên của bạn (hoặc đăng nhập để lưu vào tài khoản)" value="Khách hàng">
-                            </div>
-                        `}
-                        <textarea id="reviewCommentInput" class="review-textarea" placeholder="Hãy chia sẻ nhận xét chi tiết về chất lượng sản phẩm, độ hoàn thiện, đóng gói và dịch vụ giao hàng..."></textarea>
-                        <button type="button" id="submitReviewBtn" class="review-submit-btn">
-                            <i class="ri-send-plane-fill"></i> Gửi Đánh Giá
-                        </button>
-                    </div>
-                </div>
+                ${reviewFormHtml}
 
                 <div class="reviews-list-container">
                     ${filteredReviews.length === 0 ? `
@@ -3417,8 +3558,10 @@ function openProductDetail(product: Product): void {
 }
 
 const addItemToCart = (product: Product, quantity: number = 1, variantName?: string): void => {
-    const itemPrice = state.selectedVariant ? state.selectedVariant.price : product.price;
-    const itemImage = state.selectedVariant?.imageUrl || product.imageUrl;
+    const isVariantForThisProduct = state.activeProduct?.id === product.id && state.selectedVariant;
+    const itemPrice = isVariantForThisProduct ? state.selectedVariant!.price : product.price;
+    const itemImage = isVariantForThisProduct ? (state.selectedVariant!.imageUrl || product.imageUrl) : product.imageUrl;
+    const itemWeight = isVariantForThisProduct ? ((state.selectedVariant as any)!.weight || (product as any).weight || 300) : ((product as any).weight || 300);
 
     const existingIndex = state.cart.findIndex(
         item => item.productId === product.id && item.variantName === variantName
@@ -3435,7 +3578,7 @@ const addItemToCart = (product: Product, quantity: number = 1, variantName?: str
             imageUrl: itemImage,
             quantity: quantity,
             variantName: variantName,
-            weight: (product as any).weight || 300
+            weight: itemWeight
         });
     }
 
@@ -4486,6 +4629,7 @@ const renderCartItemsList = (): void => {
             btn.addEventListener('click', async () => {
                 const action = btn.getAttribute('data-action');
                 const idx = parseInt(btn.getAttribute('data-idx') || '0', 10);
+                if (!state.cart[idx]) return;
                 if (action === 'minus') {
                     state.cart[idx].quantity--;
                     if (state.cart[idx].quantity <= 0) state.cart.splice(idx, 1);
@@ -4706,17 +4850,13 @@ const showSepayModal = (data: {
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.8125rem; color: #0284c7; margin-bottom: 14px;">
-                    <i class="ri-loader-4-line ri-spin" style="font-size: 1rem;"></i>
-                    <span>Đang chờ hệ thống xác nhận thanh toán...</span>
+                <div id="sepayStatusBadge" style="display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 0.875rem; color: #0284c7; background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px 16px; border-radius: 10px; margin-bottom: 14px; font-weight: 500;">
+                    <i class="ri-loader-4-line ri-spin" id="sepayStatusIcon" style="font-size: 1.15rem; color: #0284c7;"></i>
+                    <span id="sepayStatusText">Hệ thống đang tự động kiểm tra giao dịch...</span>
                 </div>
 
-                <button type="button" id="simulateSepaySuccessBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
-                    <i class="ri-checkbox-circle-line"></i> Xác Nhận Đã Chuyển Khoản (SePay Test)
-                </button>
-
                 <div>
-                    <button type="button" class="btn btn-secondary close-sepay-modal" style="width: 100%;">
+                    <button type="button" class="btn btn-secondary close-sepay-modal" style="width: 100%; font-size: 0.875rem; padding: 10px 16px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; cursor: pointer; font-weight: 600;">
                         Đóng lại và xem danh sách đơn hàng
                     </button>
                 </div>
@@ -4738,53 +4878,64 @@ const showSepayModal = (data: {
         b.addEventListener('click', closeModal);
     });
 
-    const simSepayBtn = document.getElementById('simulateSepaySuccessBtn');
-    if (simSepayBtn) {
-        simSepayBtn.addEventListener('click', async () => {
-            simSepayBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> Đang xác nhận thanh toán...`;
-            try {
-                const res = await fetch(`${API_BASE}/api/orders/${data.orderId}/sepay/simulate-success`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
-                    }
-                });
-                const sData = await res.json();
-                if (sData.success) {
-                    showToast('Thanh toán thành công', `Đơn hàng #${data.orderId} đã được SePay xác nhận và kích hoạt GHN!`, 'success');
-                    closeModal();
-                } else {
-                    showToast('Lỗi', sData.message || 'Không thể xác nhận thanh toán', 'error');
-                    simSepayBtn.innerHTML = `<i class="ri-checkbox-circle-line"></i> Xác Nhận Đã Chuyển Khoản (SePay Test)`;
-                }
-            } catch {
-                showToast('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
-                simSepayBtn.innerHTML = `<i class="ri-checkbox-circle-line"></i> Xác Nhận Đã Chuyển Khoản (SePay Test)`;
-            }
-        });
-    }
+    const statusBadge = document.getElementById('sepayStatusBadge');
+    const statusText = document.getElementById('sepayStatusText');
+    const statusIcon = document.getElementById('sepayStatusIcon');
+
+    const updateStatusUI = (msg: string, type: 'waiting' | 'success' | 'warn') => {
+        if (!statusBadge || !statusText || !statusIcon) return;
+        statusText.textContent = msg;
+        if (type === 'success') {
+            statusBadge.style.background = '#ecfdf5';
+            statusBadge.style.borderColor = '#a7f3d0';
+            statusBadge.style.color = '#059669';
+            statusBadge.style.fontWeight = '700';
+            statusIcon.className = 'ri-checkbox-circle-fill';
+            statusIcon.style.color = '#059669';
+        } else if (type === 'warn') {
+            statusBadge.style.background = '#fffbeb';
+            statusBadge.style.borderColor = '#fde68a';
+            statusBadge.style.color = '#d97706';
+            statusIcon.className = 'ri-error-warning-line';
+            statusIcon.style.color = '#d97706';
+        } else {
+            statusBadge.style.background = '#f0f9ff';
+            statusBadge.style.borderColor = '#bae6fd';
+            statusBadge.style.color = '#0284c7';
+            statusIcon.className = 'ri-loader-4-line ri-spin';
+            statusIcon.style.color = '#0284c7';
+        }
+    };
 
     modalEl.querySelectorAll('.copy-text-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const text = btn.getAttribute('data-copy') || '';
-            navigator.clipboard.writeText(text);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(() => {});
+            }
             showToast('Đã sao chép', text, 'success');
         });
     });
 
     sepayPollingInterval = setInterval(async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/orders/${data.orderId}`);
+            const res = await fetch(`${API_BASE}/api/orders/${data.orderId}/sepay/check`, {
+                headers: {
+                    ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
+                }
+            });
             const resData = await res.json();
-            if (resData.success && resData.data && resData.data.paymentStatus === 'paid') {
+            const isPaid = (resData.success && resData.isPaid) ||
+                           (resData.success && resData.data && resData.data.paymentStatus === 'paid');
+            if (isPaid) {
                 clearInterval(sepayPollingInterval);
                 sepayPollingInterval = null;
-                showToast('Thanh toán thành công', `Đơn hàng #${data.orderId} đã được SePay ghi nhận thanh toán!`, 'success');
-                setTimeout(closeModal, 1500);
+                updateStatusUI('Thanh toán thành công! Đang chuyển hướng...', 'success');
+                showToast('Thanh toán thành công', `Đơn hàng #${data.orderId} đã được thanh toán thành công và kích hoạt vận đơn GHN!`, 'success');
+                setTimeout(closeModal, 1200);
             }
         } catch {}
-    }, 3000);
+    }, 2500);
 };
 
 const openSepayModalForOrder = async (orderId: string | number) => {
@@ -4805,6 +4956,12 @@ const initOrdersView = async (): Promise<void> => {
     const loadingEl = document.getElementById('ordersLoading');
     const emptyEl = document.getElementById('ordersEmpty');
     const listEl = document.getElementById('ordersList');
+
+    if (!state.user || !state.token) {
+        state.orders = [];
+        if (loadingEl) loadingEl.style.display = 'none';
+        return;
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const momoResultCode = urlParams.get('momoResult') ?? urlParams.get('resultCode');
@@ -4837,20 +4994,16 @@ const initOrdersView = async (): Promise<void> => {
             } catch {}
         }
 
-        if (fetchedOrders.length === 0) {
+        if (fetchedOrders.length === 0 && state.user && state.user.id) {
             try {
-                const fallbackRes = await fetch(`${API_BASE}/api/orders`, {
+                const fallbackRes = await fetch(`${API_BASE}/api/orders?userId=${encodeURIComponent(state.user.id)}`, {
                     headers: {
                         ...(state.token ? { Authorization: `Bearer ${state.token}` } : {})
                     }
                 });
                 const fallbackData = await fallbackRes.json();
                 if (fallbackData.success && Array.isArray(fallbackData.data)) {
-                    if (state.user && state.user.id) {
-                        fetchedOrders = fallbackData.data.filter((o: any) => String(o.userId) === String(state.user!.id));
-                    } else {
-                        fetchedOrders = fallbackData.data;
-                    }
+                    fetchedOrders = fallbackData.data.filter((o: any) => String(o.userId) === String(state.user!.id));
                 }
             } catch {}
         }
@@ -5216,8 +5369,9 @@ const initLoginView = (): void => {
                     localStorage.setItem('novashop_customer_token', result.data.token);
                     localStorage.setItem('novashop_customer_user', JSON.stringify(result.data.user));
                     showToast('Thành công', `Xin chào, ${result.data.user.name}!`, 'success');
+                    const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
                     setTimeout(() => {
-                        navigate('/');
+                        navigate(redirect);
                     }, 800);
                 } else {
                     showToast('Đăng nhập thất bại', result.message || 'Sai thông tin đăng nhập', 'error');

@@ -1,8 +1,4 @@
 const orderModel = require('../models/orderModel');
-const ghnService = require('../services/ghnService');
-const momoService = require('../services/momoService');
-const sepayService = require('../services/sepayService');
-const config = require('../config');
 
 const getAllOrders = async (req, res) => {
   try {
@@ -28,7 +24,7 @@ const getOrderById = async (req, res) => {
 
 const getMyOrders = async (req, res) => {
   try {
-    const userId = req.params.userId || req.query.userId || (req.user && req.user.id);
+    const userId = req.query.userId || (req.user && req.user.id);
     if (!userId) {
       return res.status(400).json({ success: false, message: 'Yêu cầu định danh người dùng' });
     }
@@ -41,28 +37,7 @@ const getMyOrders = async (req, res) => {
 
 const createOrder = async (req, res) => {
   try {
-    const {
-      customerName,
-      customerPhone,
-      shippingAddress,
-      items,
-      paymentMethod,
-      userId,
-      voucherCode,
-      shippingFee,
-      provinceId,
-      districtId,
-      wardCode
-    } = req.body;
-
-    const finalUserId = userId || (req.user && req.user.id);
-    if (!finalUserId || finalUserId === 'guest') {
-      return res.status(401).json({
-        success: false,
-        message: 'Vui lòng đăng nhập để tiến hành đặt hàng'
-      });
-    }
-
+    const { customerName, customerPhone, shippingAddress, items, paymentMethod, userId, voucherCode } = req.body;
     if (!customerName || !customerPhone || !shippingAddress || !items || items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -71,45 +46,19 @@ const createOrder = async (req, res) => {
     }
 
     const order = await orderModel.create({
-      userId: finalUserId,
+      userId: userId || 'guest',
       customerName,
       customerPhone,
       shippingAddress,
-      paymentMethod: paymentMethod || 'cod',
+      paymentMethod,
       items,
-      voucherCode,
-      shippingFee: Number(shippingFee) || 0,
-      provinceId: provinceId ? Number(provinceId) : null,
-      districtId: districtId ? Number(districtId) : null,
-      wardCode: wardCode ? String(wardCode) : null
+      voucherCode
     });
-
-    let momoPayment = null;
-    let sepayPayment = null;
-
-    if (order.paymentMethod === 'momo') {
-      try {
-        const momoRes = await momoService.createPayment(order);
-        if (momoRes && momoRes.payUrl) {
-          momoPayment = momoRes;
-        }
-      } catch (mErr) {
-        console.warn('[MoMo] Pre-create payment on checkout warning:', mErr.message);
-      }
-    } else if (order.paymentMethod === 'sepay') {
-      try {
-        sepayPayment = sepayService.generatePaymentInfo(order);
-      } catch (sErr) {
-        console.warn('[SePay] Pre-generate payment info warning:', sErr.message);
-      }
-    }
 
     return res.status(201).json({
       success: true,
       message: 'Tạo đơn hàng thành công',
-      data: order,
-      momoPayment,
-      sepayPayment
+      data: order
     });
   } catch (error) {
     return res.status(400).json({
@@ -188,359 +137,6 @@ const getStats = async (req, res) => {
   }
 };
 
-const getGhnProvinces = async (req, res) => {
-  try {
-    const provinces = await ghnService.getProvinces();
-    return res.json({ success: true, data: provinces });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi lấy danh sách tỉnh thành GHN: ' + error.message });
-  }
-};
-
-const getGhnDistricts = async (req, res) => {
-  try {
-    const districts = await ghnService.getDistricts(req.params.provinceId);
-    return res.json({ success: true, data: districts });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi lấy danh sách quận huyện GHN: ' + error.message });
-  }
-};
-
-const getGhnWards = async (req, res) => {
-  try {
-    const wards = await ghnService.getWards(req.params.districtId);
-    return res.json({ success: true, data: wards });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi lấy danh sách phường xã GHN: ' + error.message });
-  }
-};
-
-const lookupGhnWard = async (req, res) => {
-  try {
-    const { provinceId, keyword } = req.query;
-    if (!provinceId || !keyword) {
-      return res.status(400).json({ success: false, message: 'Thiếu provinceId hoặc keyword' });
-    }
-    const result = await ghnService.lookupWard(provinceId, keyword);
-    if (result) {
-      return res.json({ success: true, data: result });
-    }
-    return res.json({ success: false, message: 'Không tìm thấy đơn vị hành chính phù hợp' });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi tra cứu: ' + error.message });
-  }
-};
-
-const calculateGhnFee = async (req, res) => {
-  try {
-    const { district_id, ward_code, weight, insurance_value } = req.body;
-    if (!district_id || !ward_code) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng chọn Quận/Huyện và Phường/Xã để tính phí giao hàng.'
-      });
-    }
-
-    const feeResult = await ghnService.calculateFee({
-      toDistrictId: district_id,
-      toWardCode: ward_code,
-      weight: weight || 300,
-      insuranceValue: insurance_value || 0
-    });
-
-    const leadtime = await ghnService.getLeadTime(district_id, ward_code);
-
-    return res.json({
-      success: true,
-      fee: feeResult.total,
-      service_fee: feeResult.service_fee,
-      insurance_fee: feeResult.insurance_fee,
-      leadtime,
-      formatted_fee: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(feeResult.total)
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi tính cước GHN: ' + error.message });
-  }
-};
-
-const createGhnOrder = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-
-    const { weight, length, width, height, required_note, note } = req.body || {};
-    const extraParams = {
-      weight: weight ? Number(weight) : undefined,
-      length: length ? Number(length) : undefined,
-      width: width ? Number(width) : undefined,
-      height: height ? Number(height) : undefined,
-      required_note,
-      note
-    };
-
-    const ghnRes = await ghnService.createShippingOrder(order, extraParams);
-    if (ghnRes.success && ghnRes.order_code) {
-      const updated = await orderModel.updateGhnShipping(order.id, {
-        ghnOrderCode: ghnRes.order_code,
-        ghnStatus: ghnRes.status || 'ready_to_pick',
-        ghnExpectedDelivery: ghnRes.expected_delivery_time || null
-      });
-      return res.json({
-        success: true,
-        message: 'Tạo vận đơn GHN thành công',
-        data: updated,
-        ghn: ghnRes
-      });
-    }
-
-    return res.status(400).json({
-      success: false,
-      message: ghnRes.message || 'Không thể tạo vận đơn GHN',
-      error: ghnRes.raw_error
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi tạo vận đơn GHN: ' + error.message });
-  }
-};
-
-const syncGhnOrder = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order || !order.ghnOrderCode) {
-      return res.status(400).json({ success: false, message: 'Đơn hàng chưa có mã vận đơn GHN để đồng bộ' });
-    }
-
-    const detailRes = await ghnService.getOrderDetail(order.ghnOrderCode);
-    if (detailRes.success && detailRes.data) {
-      const remoteStatus = detailRes.data.status || order.ghnStatus;
-      const expectedDelivery = detailRes.data.leadtime || detailRes.data.expected_delivery_time || order.ghnExpectedDelivery;
-      const updated = await orderModel.updateGhnShipping(order.id, {
-        ghnStatus: remoteStatus,
-        ghnExpectedDelivery: expectedDelivery ? new Date(expectedDelivery * 1000 || expectedDelivery) : null
-      });
-      return res.json({
-        success: true,
-        message: `Đã đồng bộ trạng thái mới nhất từ GHN: ${remoteStatus}`,
-        data: updated,
-        ghnData: detailRes.data
-      });
-    }
-
-    return res.status(400).json({
-      success: false,
-      message: detailRes.message || 'Không thể đồng bộ thông tin từ GHN'
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi đồng bộ vận đơn GHN: ' + error.message });
-  }
-};
-
-const cancelGhnOrder = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order || !order.ghnOrderCode) {
-      return res.status(400).json({ success: false, message: 'Đơn hàng chưa có mã vận đơn GHN' });
-    }
-
-    const cancelRes = await ghnService.cancelOrder(order.ghnOrderCode);
-    if (cancelRes.success) {
-      await orderModel.updateGhnShipping(order.id, { ghnStatus: 'cancel' });
-      return res.json({ success: true, message: 'Đã gửi yêu cầu hủy vận đơn tới GHN' });
-    }
-
-    return res.status(400).json({
-      success: false,
-      message: cancelRes.message || 'Không thể hủy vận đơn trên GHN'
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi hủy vận đơn GHN: ' + error.message });
-  }
-};
-
-const createMomoPayment = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-
-    const requestType = req.body.requestType || config.momo.requestType || 'payWithATM';
-    const momoRes = await momoService.createPayment(order, requestType);
-
-    if (momoRes.payUrl) {
-      return res.json({ success: true, data: momoRes });
-    }
-
-    return res.status(400).json({
-      success: false,
-      message: momoRes.message || 'Không thể khởi tạo thanh toán MoMo',
-      data: momoRes
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi tạo giao dịch MoMo: ' + error.message });
-  }
-};
-
-const handleMomoIpn = async (req, res) => {
-  try {
-    const payload = req.body;
-    console.log('[MoMo IPN] Received:', payload);
-    const isValid = momoService.isValidResponse(payload);
-    if (!isValid) {
-      console.warn('[MoMo IPN] Invalid signature!');
-      return res.status(400).json({ message: 'Invalid signature', status: 'error' });
-    }
-
-    const orderId = momoService.extractOrderId(payload);
-    if (!orderId) {
-      return res.status(400).json({ message: 'Missing orderId in extraData or orderId', status: 'error' });
-    }
-
-    const isSuccess = momoService.isSuccessful(payload);
-    if (isSuccess) {
-      await orderModel.updatePaymentStatus(orderId, {
-        paymentStatus: 'paid',
-        transactionId: payload.transId || payload.orderId,
-        paymentMethod: 'momo'
-      });
-      console.log(`[MoMo IPN] Order #${orderId} marked as PAID.`);
-    } else {
-      console.log(`[MoMo IPN] Order #${orderId} payment failed with code ${payload.resultCode}: ${payload.message}`);
-    }
-
-    return res.status(200).json({ message: 'Received and processed', status: 'success' });
-  } catch (error) {
-    console.error('[MoMo IPN] Exception:', error.message);
-    return res.status(500).json({ message: error.message, status: 'error' });
-  }
-};
-
-const handleMomoCallback = async (req, res) => {
-  try {
-    const payload = req.query;
-    console.log('[MoMo Callback] Query received:', payload);
-    const orderId = momoService.extractOrderId(payload);
-    const isSuccess = momoService.isSuccessful(payload);
-
-    if (orderId && isSuccess) {
-      await orderModel.updatePaymentStatus(orderId, {
-        paymentStatus: 'paid',
-        transactionId: payload.transId || payload.orderId,
-        paymentMethod: 'momo'
-      });
-    }
-
-    const redirectUrl = `/orders?momoResult=${payload.resultCode || 0}&orderId=${encodeURIComponent(orderId || '')}&message=${encodeURIComponent(payload.message || '')}`;
-    return res.redirect(redirectUrl);
-  } catch (error) {
-    console.error('[MoMo Callback] Exception:', error.message);
-    return res.redirect('/orders?momoResult=99&message=' + encodeURIComponent(error.message));
-  }
-};
-
-const getSepayInfo = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-    const info = sepayService.generatePaymentInfo(order);
-    return res.json({ success: true, data: info });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi tạo thông tin SePay: ' + error.message });
-  }
-};
-
-const handleSepayWebhook = async (req, res) => {
-  try {
-    const isValidToken = sepayService.verifyWebhookToken(req);
-    if (!isValidToken) {
-      console.warn('[SePay Webhook] Unauthorized token');
-      return res.status(401).json({ success: false, message: 'Unauthorized webhook token' });
-    }
-
-    const payload = req.body;
-    console.log('[SePay Webhook] Received:', payload);
-    const content = payload.content || payload.transactionContent || payload.description || '';
-    const orderId = sepayService.extractOrderId(content);
-
-    if (!orderId) {
-      return res.status(200).json({ success: true, message: 'Webhook received but no matching order code in content' });
-    }
-
-    const order = await orderModel.findById(orderId);
-    if (!order) {
-      return res.status(200).json({ success: true, message: `Order ${orderId} not found` });
-    }
-
-    const transferAmount = Number(payload.transferAmount || payload.amountIn || payload.accumulated || 0);
-    if (transferAmount > 0 && transferAmount < Number(order.totalAmount)) {
-      console.warn(`[SePay Webhook] Transfer amount ${transferAmount} is less than order total ${order.totalAmount}`);
-      return res.status(200).json({ success: true, message: 'Amount is less than order total' });
-    }
-
-    await orderModel.updatePaymentStatus(order.id, {
-      paymentStatus: 'paid',
-      transactionId: String(payload.referenceCode || payload.id || `SEPAY_${Date.now()}`),
-      paymentMethod: 'sepay'
-    });
-
-    console.log(`[SePay Webhook] Order #${order.id} marked as PAID via SePay!`);
-    return res.json({ success: true, message: `Order ${order.id} paid successfully` });
-  } catch (error) {
-    console.error('[SePay Webhook] Error:', error.message);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const simulateSepaySuccess = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-
-    const updated = await orderModel.updatePaymentStatus(order.id, {
-      paymentStatus: 'paid',
-      transactionId: `SEPAY_SIM_${Date.now()}`,
-      paymentMethod: 'sepay'
-    });
-
-    return res.json({
-      success: true,
-      message: `Mô phỏng thanh toán SePay thành công cho đơn #${order.id}!`,
-      data: updated
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const simulateMomoSuccess = async (req, res) => {
-  try {
-    const order = await orderModel.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-
-    const updated = await orderModel.updatePaymentStatus(order.id, {
-      paymentStatus: 'paid',
-      transactionId: `MOMO_SIM_${Date.now()}`,
-      paymentMethod: 'momo'
-    });
-
-    return res.json({
-      success: true,
-      message: `Xác nhận thanh toán MoMo thành công cho đơn #${order.id}!`,
-      data: updated
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -550,20 +146,5 @@ module.exports = {
   updateOrder,
   getVouchers,
   applyVoucher,
-  getStats,
-  getGhnProvinces,
-  getGhnDistricts,
-  getGhnWards,
-  lookupGhnWard,
-  calculateGhnFee,
-  createGhnOrder,
-  cancelGhnOrder,
-  syncGhnOrder,
-  createMomoPayment,
-  handleMomoIpn,
-  handleMomoCallback,
-  getSepayInfo,
-  handleSepayWebhook,
-  simulateSepaySuccess,
-  simulateMomoSuccess
+  getStats
 };

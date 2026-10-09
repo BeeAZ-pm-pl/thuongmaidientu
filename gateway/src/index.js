@@ -59,7 +59,7 @@ app.use(
   createProxyMiddleware({
     target: config.services.order,
     changeOrigin: true,
-    pathFilter: ['/api/orders', '/api/cart', '/payment']
+    pathFilter: ['/api/orders', '/api/vouchers', '/api/cart', '/payment']
   })
 );
 
@@ -92,16 +92,17 @@ const getAdminShell = () => `<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/css/variables.css">
-  <link rel="stylesheet" href="/admin/css/base.css">
-  <link rel="stylesheet" href="/admin/css/admin.css">
-  <link rel="stylesheet" href="/admin/css/modals.css">
-  <link rel="stylesheet" href="/admin/css/admin-login.css">
+  <link rel="stylesheet" href="/admin/css/variables.css?v=2.6">
+  <link rel="stylesheet" href="/admin/css/base.css?v=2.6">
+  <link rel="stylesheet" href="/admin/css/admin.css?v=2.6">
+  <link rel="stylesheet" href="/admin/css/modals.css?v=2.6">
+  <link rel="stylesheet" href="/admin/css/admin-login.css?v=2.6">
 </head>
 <body>
   <div id="admin-app"></div>
   <div id="toastContainer" class="toast-container"></div>
-  <script src="/admin/js/admin.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/admin/js/admin.js?v=2.6"></script>
 </body>
 </html>`;
 
@@ -115,19 +116,19 @@ const getClientShell = () => `<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="/css/variables.css">
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/navbar.css">
-  <link rel="stylesheet" href="/css/storefront.css">
-  <link rel="stylesheet" href="/css/modals.css">
-  <link rel="stylesheet" href="/css/cart.css">
-  <link rel="stylesheet" href="/css/orders.css">
-  <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/variables.css?v=2.5">
+  <link rel="stylesheet" href="/css/base.css?v=2.5">
+  <link rel="stylesheet" href="/css/navbar.css?v=2.5">
+  <link rel="stylesheet" href="/css/storefront.css?v=2.5">
+  <link rel="stylesheet" href="/css/modals.css?v=2.5">
+  <link rel="stylesheet" href="/css/cart.css?v=2.5">
+  <link rel="stylesheet" href="/css/orders.css?v=2.5">
+  <link rel="stylesheet" href="/css/auth.css?v=2.5">
 </head>
 <body>
   <div id="app"></div>
   <div id="toastContainer" class="toast-container"></div>
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=2.5"></script>
 </body>
 </html>`;
 

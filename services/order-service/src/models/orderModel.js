@@ -1,7 +1,6 @@
 const mysql = require('mysql2/promise');
 const config = require('../config');
 const { publishOrderEvent } = require('../utils/messageQueue');
-const ghnService = require('../services/ghnService');
 
 let pool = null;
 
@@ -70,27 +69,6 @@ const initDb = async () => {
     if (cols.length === 0) {
       await pool.query("ALTER TABLE orders ADD COLUMN voucherCode VARCHAR(50) DEFAULT NULL, ADD COLUMN discountAmount BIGINT DEFAULT 0");
     }
-
-    const ensureOrderColumn = async (colName, colDef) => {
-      try {
-        const [c] = await pool.query(`SHOW COLUMNS FROM orders LIKE '${colName}'`);
-        if (c.length === 0) {
-          await pool.query(`ALTER TABLE orders ADD COLUMN ${colName} ${colDef}`);
-        }
-      } catch (err) {
-        console.warn(`[DB] Column ${colName} check error:`, err.message);
-      }
-    };
-
-    await ensureOrderColumn('paymentStatus', "VARCHAR(50) DEFAULT 'unpaid'");
-    await ensureOrderColumn('transactionId', "VARCHAR(128) DEFAULT NULL");
-    await ensureOrderColumn('shippingFee', "BIGINT DEFAULT 0");
-    await ensureOrderColumn('provinceId', "INT DEFAULT NULL");
-    await ensureOrderColumn('districtId', "INT DEFAULT NULL");
-    await ensureOrderColumn('wardCode', "VARCHAR(30) DEFAULT NULL");
-    await ensureOrderColumn('ghnOrderCode', "VARCHAR(64) DEFAULT NULL");
-    await ensureOrderColumn('ghnStatus', "VARCHAR(64) DEFAULT NULL");
-    await ensureOrderColumn('ghnExpectedDelivery', "VARCHAR(64) DEFAULT NULL");
   } catch {}
 
   const [vRows] = await pool.query('SELECT COUNT(*) as count FROM vouchers');
@@ -176,22 +154,11 @@ const validateVoucher = async (code, orderTotal) => {
 
 const formatOrderRow = (row) => {
   if (!row) return null;
-  const ghnCode = row.ghnOrderCode || null;
   return {
     ...row,
     items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items,
     voucherCode: row.voucherCode || null,
-    discountAmount: Number(row.discountAmount || 0),
-    shippingFee: Number(row.shippingFee || 0),
-    paymentStatus: row.paymentStatus || 'unpaid',
-    transactionId: row.transactionId || null,
-    provinceId: row.provinceId ? Number(row.provinceId) : null,
-    districtId: row.districtId ? Number(row.districtId) : null,
-    wardCode: row.wardCode || null,
-    ghnOrderCode: ghnCode,
-    ghnStatus: row.ghnStatus || null,
-    ghnExpectedDelivery: row.ghnExpectedDelivery || null,
-    ghnTrackingUrl: ghnCode ? `${config.ghn.trackingUrl}${ghnCode}` : null
+    discountAmount: Number(row.discountAmount || 0)
   };
 };
 
@@ -261,72 +228,16 @@ const create = async (orderData) => {
     }
   }
 
-  const shippingFee = Number(orderData.shippingFee) || 0;
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+  const totalAmount = Math.max(0, subtotal - discountAmount);
   const id = `ORD_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
   const userId = orderData.userId || 'guest';
   const paymentMethod = orderData.paymentMethod || 'cod';
-  const paymentStatus = orderData.paymentStatus || 'unpaid';
-  const provinceId = orderData.provinceId ? Number(orderData.provinceId) : null;
-  const districtId = orderData.districtId ? Number(orderData.districtId) : null;
-  const wardCode = orderData.wardCode ? String(orderData.wardCode) : null;
-
-  let ghnOrderCode = null;
-  let ghnStatus = null;
-  let ghnExpectedDelivery = null;
-
-  if (paymentMethod === 'cod' && districtId && wardCode) {
-    try {
-      const ghnRes = await ghnService.createShippingOrder(
-        {
-          id,
-          customerName: orderData.customerName,
-          customerPhone: orderData.customerPhone,
-          shippingAddress: orderData.shippingAddress,
-          totalAmount,
-          items,
-          paymentStatus: 'unpaid'
-        },
-        { districtId, wardCode }
-      );
-      if (ghnRes && ghnRes.success && ghnRes.order_code) {
-        ghnOrderCode = ghnRes.order_code;
-        ghnStatus = 'ready_to_pick';
-        ghnExpectedDelivery = ghnRes.expected_delivery_time || null;
-      }
-    } catch (ghnErr) {
-      console.warn('[GHN] Auto create shipping order for COD order warning:', ghnErr.message);
-    }
-  }
 
   const db = await initDb();
   await db.query(
-    `INSERT INTO orders (
-      id, userId, customerName, customerPhone, shippingAddress, paymentMethod, items,
-      totalAmount, status, voucherCode, discountAmount, paymentStatus, transactionId,
-      shippingFee, provinceId, districtId, wardCode, ghnOrderCode, ghnStatus,
-      ghnExpectedDelivery, createdAt, updatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-    [
-      id,
-      userId,
-      orderData.customerName,
-      orderData.customerPhone,
-      orderData.shippingAddress,
-      paymentMethod,
-      JSON.stringify(items),
-      totalAmount,
-      voucherCode,
-      discountAmount,
-      paymentStatus,
-      shippingFee,
-      provinceId,
-      districtId,
-      wardCode,
-      ghnOrderCode,
-      ghnStatus,
-      ghnExpectedDelivery
-    ]
+    `INSERT INTO orders (id, userId, customerName, customerPhone, shippingAddress, paymentMethod, items, totalAmount, status, voucherCode, discountAmount, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW(), NOW())`,
+    [id, userId, orderData.customerName, orderData.customerPhone, orderData.shippingAddress, paymentMethod, JSON.stringify(items), totalAmount, voucherCode, discountAmount]
   );
 
   if (voucherCode) {
@@ -345,16 +256,6 @@ const create = async (orderData) => {
     status: 'pending',
     voucherCode,
     discountAmount,
-    paymentStatus,
-    transactionId: null,
-    shippingFee,
-    provinceId,
-    districtId,
-    wardCode,
-    ghnOrderCode,
-    ghnStatus,
-    ghnExpectedDelivery,
-    ghnTrackingUrl: ghnOrderCode ? `${config.ghn.trackingUrl}${ghnOrderCode}` : null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -393,7 +294,6 @@ const updateOrder = async (id, orderData) => {
   const customerPhone = orderData.customerPhone !== undefined ? orderData.customerPhone : current.customerPhone;
   const shippingAddress = orderData.shippingAddress !== undefined ? orderData.shippingAddress : current.shippingAddress;
   const paymentMethod = orderData.paymentMethod !== undefined ? orderData.paymentMethod : current.paymentMethod;
-  const paymentStatus = orderData.paymentStatus !== undefined ? orderData.paymentStatus : current.paymentStatus;
   const voucherCode = orderData.voucherCode !== undefined ? orderData.voucherCode : current.voucherCode;
   let discountAmount = orderData.discountAmount !== undefined ? Number(orderData.discountAmount) : Number(current.discountAmount || 0);
 
@@ -406,8 +306,7 @@ const updateOrder = async (id, orderData) => {
     }
     items = orderData.items;
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-    const shippingFee = Number(current.shippingFee || 0);
-    totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+    totalAmount = Math.max(0, subtotal - discountAmount);
   } else if (orderData.totalAmount !== undefined) {
     totalAmount = Number(orderData.totalAmount);
   }
@@ -419,7 +318,6 @@ const updateOrder = async (id, orderData) => {
       customerPhone = ?,
       shippingAddress = ?,
       paymentMethod = ?,
-      paymentStatus = ?,
       status = ?,
       items = ?,
       totalAmount = ?,
@@ -427,7 +325,7 @@ const updateOrder = async (id, orderData) => {
       discountAmount = ?,
       updatedAt = NOW()
      WHERE id = ?`,
-    [customerName, customerPhone, shippingAddress, paymentMethod, paymentStatus, status, JSON.stringify(items), totalAmount, voucherCode, discountAmount, id]
+    [customerName, customerPhone, shippingAddress, paymentMethod, status, JSON.stringify(items), totalAmount, voucherCode, discountAmount, id]
   );
 
   const updatedOrder = await findById(id);
@@ -458,66 +356,6 @@ const getStats = async () => {
   };
 };
 
-const updatePaymentStatus = async (id, { paymentStatus, transactionId, paymentMethod }) => {
-  const current = await findById(id);
-  if (!current) return null;
-
-  const db = await initDb();
-  const newPaymentStatus = paymentStatus || current.paymentStatus;
-  const newTransId = transactionId !== undefined ? transactionId : current.transactionId;
-  const newPaymentMethod = paymentMethod || current.paymentMethod;
-  const newStatus = (newPaymentStatus === 'paid' && current.status === 'pending') ? 'processing' : current.status;
-
-  await db.query(
-    `UPDATE orders SET
-      paymentStatus = ?,
-      transactionId = ?,
-      paymentMethod = ?,
-      status = ?,
-      updatedAt = NOW()
-     WHERE id = ?`,
-    [newPaymentStatus, newTransId, newPaymentMethod, newStatus, id]
-  );
-
-  let updatedOrder = await findById(id);
-
-  if (newPaymentStatus === 'paid' && !updatedOrder.ghnOrderCode) {
-    try {
-      const ghnRes = await ghnService.createShippingOrder(updatedOrder, {
-        districtId: updatedOrder.districtId,
-        wardCode: updatedOrder.wardCode
-      });
-      if (ghnRes && ghnRes.success && ghnRes.order_code) {
-        await updateGhnShipping(id, {
-          ghnOrderCode: ghnRes.order_code,
-          ghnStatus: 'ready_to_pick',
-          ghnExpectedDelivery: ghnRes.expected_delivery_time || null
-        });
-        updatedOrder = await findById(id);
-      }
-    } catch (ghnErr) {
-      console.warn('[GHN] Auto create shipping after payment error:', ghnErr.message);
-    }
-  }
-
-  await publishOrderEvent('order.payment_updated', updatedOrder);
-  return updatedOrder;
-};
-
-const updateGhnShipping = async (id, { ghnOrderCode, ghnStatus, ghnExpectedDelivery }) => {
-  const db = await initDb();
-  await db.query(
-    `UPDATE orders SET
-      ghnOrderCode = COALESCE(?, ghnOrderCode),
-      ghnStatus = COALESCE(?, ghnStatus),
-      ghnExpectedDelivery = COALESCE(?, ghnExpectedDelivery),
-      updatedAt = NOW()
-     WHERE id = ?`,
-    [ghnOrderCode, ghnStatus, ghnExpectedDelivery, id]
-  );
-  return findById(id);
-};
-
 module.exports = {
   initDb,
   findAll,
@@ -526,10 +364,7 @@ module.exports = {
   create,
   updateStatus,
   updateOrder,
-  updatePaymentStatus,
-  updateGhnShipping,
   getStats,
   getAvailableVouchers,
   validateVoucher
 };
-

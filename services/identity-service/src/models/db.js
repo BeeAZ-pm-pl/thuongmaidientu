@@ -85,12 +85,10 @@ const initDb = async () => {
           );
         }
       } else {
-        const hashAdmin = await bcrypt.hash('admin', 10);
-        const hash123 = await bcrypt.hash('123456', 10);
+        const hashPass = await bcrypt.hash('Congdat123@', 10);
         await pool.query(`
           INSERT IGNORE INTO admins (id, name, username, email, password, phone, role) VALUES
-          ('usr_admin_root', 'Quản Trị Viên Hệ Thống', 'admin', 'admin@system.local', '${hashAdmin}', '0988888888', 'admin'),
-          ('usr_admin_01', 'Admin Quản Lý Shop', 'admin01', 'admin@shop.com', '${hash123}', '0988888888', 'admin')
+          ('usr_admin_nguyendat', 'Nguyễn Công Đạt', 'nguyendat2kar5', 'nguyendat2kar5@gmail.com', '${hashPass}', '0987654321', 'admin')
         `);
       }
     }
@@ -107,13 +105,10 @@ const initDb = async () => {
           );
         }
       } else {
-        const hash123 = await bcrypt.hash('123456', 10);
+        const hashPass = await bcrypt.hash('Congdat123@', 10);
         await pool.query(`
           INSERT IGNORE INTO customers (id, name, email, password, phone, address, role) VALUES
-          ('usr_customer_01', 'Khách Hàng Mẫu', 'customer@shop.com', '${hash123}', '0912345678', '123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh', 'customer'),
-          ('usr_customer_02', 'Nguyễn Hoàng Nam', 'hoangnam@gmail.com', '${hash123}', '0905123456', '45 Lê Duẩn, Quận Hải Châu, Đà Nẵng', 'customer'),
-          ('usr_customer_03', 'Trần Thị Mai', 'maitran@gmail.com', '${hash123}', '0934567890', '78 Cầu Giấy, Hà Nội', 'customer'),
-          ('usr_customer_04', 'Lê Quốc Hưng', 'quochung@gmail.com', '${hash123}', '0987654321', '12 Hoàng Diệu, TP. Nha Trang', 'customer')
+          ('usr_cust_nguyendat', 'Nguyễn Công Đạt', 'datn41333@gmail.com', '${hashPass}', '0987654321', 'Số 8 Ngõ 91 Cầu Diễn, Phường Phúc Diễn, Quận Bắc Từ Liêm, Hà Nội', 'customer')
         `);
       }
     }
