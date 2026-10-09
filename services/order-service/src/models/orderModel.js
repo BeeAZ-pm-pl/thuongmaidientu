@@ -1,6 +1,7 @@
 const mysql = require('mysql2/promise');
 const config = require('../config');
 const { publishOrderEvent } = require('../utils/messageQueue');
+const ghnService = require('../services/ghnService');
 
 let pool = null;
 
@@ -69,6 +70,27 @@ const initDb = async () => {
     if (cols.length === 0) {
       await pool.query("ALTER TABLE orders ADD COLUMN voucherCode VARCHAR(50) DEFAULT NULL, ADD COLUMN discountAmount BIGINT DEFAULT 0");
     }
+
+    const ensureOrderColumn = async (colName, colDef) => {
+      try {
+        const [c] = await pool.query(`SHOW COLUMNS FROM orders LIKE '${colName}'`);
+        if (c.length === 0) {
+          await pool.query(`ALTER TABLE orders ADD COLUMN ${colName} ${colDef}`);
+        }
+      } catch (err) {
+        console.warn(`[DB] Column ${colName} check error:`, err.message);
+      }
+    };
+
+    await ensureOrderColumn('paymentStatus', "VARCHAR(50) DEFAULT 'unpaid'");
+    await ensureOrderColumn('transactionId', "VARCHAR(128) DEFAULT NULL");
+    await ensureOrderColumn('shippingFee', "BIGINT DEFAULT 0");
+    await ensureOrderColumn('provinceId', "INT DEFAULT NULL");
+    await ensureOrderColumn('districtId', "INT DEFAULT NULL");
+    await ensureOrderColumn('wardCode', "VARCHAR(30) DEFAULT NULL");
+    await ensureOrderColumn('ghnOrderCode', "VARCHAR(64) DEFAULT NULL");
+    await ensureOrderColumn('ghnStatus', "VARCHAR(64) DEFAULT NULL");
+    await ensureOrderColumn('ghnExpectedDelivery', "VARCHAR(64) DEFAULT NULL");
   } catch {}
 
   const [vRows] = await pool.query('SELECT COUNT(*) as count FROM vouchers');
@@ -92,6 +114,69 @@ const getAvailableVouchers = async () => {
     'SELECT code, name, discountType, discountValue, minOrderValue, maxDiscount, description FROM vouchers WHERE isActive = 1 AND (expiresAt IS NULL OR expiresAt > NOW()) ORDER BY minOrderValue ASC'
   );
   return rows;
+};
+
+const getAllVouchersAdmin = async () => {
+  const db = await initDb();
+  const [rows] = await db.query('SELECT * FROM vouchers ORDER BY createdAt DESC');
+  return rows;
+};
+
+const createVoucher = async (data) => {
+  const db = await initDb();
+  const code = String(data.code || '').trim().toUpperCase();
+  if (!code) throw new Error('Mã voucher không được để trống');
+  if (!data.name) throw new Error('Tên voucher không được để trống');
+  const discountType = data.discountType === 'percent' ? 'percent' : 'fixed';
+  const discountValue = Number(data.discountValue) || 0;
+  const minOrderValue = Number(data.minOrderValue) || 0;
+  const maxDiscount = data.maxDiscount ? Number(data.maxDiscount) : null;
+  const description = data.description || '';
+  const usageLimit = data.usageLimit !== undefined ? Number(data.usageLimit) : 1000;
+  const isActive = data.isActive === false || data.isActive === 0 || data.isActive === '0' ? 0 : 1;
+  const expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+
+  await db.query(
+    `INSERT INTO vouchers (code, name, discountType, discountValue, minOrderValue, maxDiscount, description, usageLimit, isActive, expiresAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [code, data.name, discountType, discountValue, minOrderValue, maxDiscount, description, usageLimit, isActive, expiresAt]
+  );
+
+  const [rows] = await db.query('SELECT * FROM vouchers WHERE code = ?', [code]);
+  return rows[0];
+};
+
+const updateVoucher = async (code, data) => {
+  const db = await initDb();
+  const cleanCode = String(code).trim().toUpperCase();
+  const [existing] = await db.query('SELECT * FROM vouchers WHERE code = ?', [cleanCode]);
+  if (existing.length === 0) throw new Error('Không tìm thấy voucher');
+
+  const cur = existing[0];
+  const name = data.name !== undefined ? data.name : cur.name;
+  const discountType = data.discountType !== undefined ? (data.discountType === 'percent' ? 'percent' : 'fixed') : cur.discountType;
+  const discountValue = data.discountValue !== undefined ? Number(data.discountValue) : cur.discountValue;
+  const minOrderValue = data.minOrderValue !== undefined ? Number(data.minOrderValue) : cur.minOrderValue;
+  const maxDiscount = data.maxDiscount !== undefined ? (data.maxDiscount ? Number(data.maxDiscount) : null) : cur.maxDiscount;
+  const description = data.description !== undefined ? data.description : cur.description;
+  const usageLimit = data.usageLimit !== undefined ? Number(data.usageLimit) : cur.usageLimit;
+  const isActive = data.isActive !== undefined ? (data.isActive ? 1 : 0) : cur.isActive;
+  const expiresAt = data.expiresAt !== undefined ? (data.expiresAt ? new Date(data.expiresAt) : null) : cur.expiresAt;
+
+  await db.query(
+    `UPDATE vouchers SET name = ?, discountType = ?, discountValue = ?, minOrderValue = ?, maxDiscount = ?, description = ?, usageLimit = ?, isActive = ?, expiresAt = ? WHERE code = ?`,
+    [name, discountType, discountValue, minOrderValue, maxDiscount, description, usageLimit, isActive, expiresAt, cleanCode]
+  );
+
+  const [rows] = await db.query('SELECT * FROM vouchers WHERE code = ?', [cleanCode]);
+  return rows[0];
+};
+
+const deleteVoucher = async (code) => {
+  const db = await initDb();
+  const cleanCode = String(code).trim().toUpperCase();
+  await db.query('DELETE FROM vouchers WHERE code = ?', [cleanCode]);
+  return true;
 };
 
 const validateVoucher = async (code, orderTotal) => {
@@ -154,11 +239,22 @@ const validateVoucher = async (code, orderTotal) => {
 
 const formatOrderRow = (row) => {
   if (!row) return null;
+  const ghnCode = row.ghnOrderCode || null;
   return {
     ...row,
     items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items,
     voucherCode: row.voucherCode || null,
-    discountAmount: Number(row.discountAmount || 0)
+    discountAmount: Number(row.discountAmount || 0),
+    shippingFee: Number(row.shippingFee || 0),
+    paymentStatus: row.paymentStatus || 'unpaid',
+    transactionId: row.transactionId || null,
+    provinceId: row.provinceId ? Number(row.provinceId) : null,
+    districtId: row.districtId ? Number(row.districtId) : null,
+    wardCode: row.wardCode || null,
+    ghnOrderCode: ghnCode,
+    ghnStatus: row.ghnStatus || null,
+    ghnExpectedDelivery: row.ghnExpectedDelivery || null,
+    ghnTrackingUrl: ghnCode ? `${config.ghn.trackingUrl}${ghnCode}` : null
   };
 };
 
@@ -228,16 +324,72 @@ const create = async (orderData) => {
     }
   }
 
-  const totalAmount = Math.max(0, subtotal - discountAmount);
+  const shippingFee = Number(orderData.shippingFee) || 0;
+  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
   const id = `ORD_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
   const userId = orderData.userId || 'guest';
   const paymentMethod = orderData.paymentMethod || 'cod';
+  const paymentStatus = orderData.paymentStatus || 'unpaid';
+  const provinceId = orderData.provinceId ? Number(orderData.provinceId) : null;
+  const districtId = orderData.districtId ? Number(orderData.districtId) : null;
+  const wardCode = orderData.wardCode ? String(orderData.wardCode) : null;
+
+  let ghnOrderCode = null;
+  let ghnStatus = null;
+  let ghnExpectedDelivery = null;
+
+  if (paymentMethod === 'cod' && districtId && wardCode) {
+    try {
+      const ghnRes = await ghnService.createShippingOrder(
+        {
+          id,
+          customerName: orderData.customerName,
+          customerPhone: orderData.customerPhone,
+          shippingAddress: orderData.shippingAddress,
+          totalAmount,
+          items,
+          paymentStatus: 'unpaid'
+        },
+        { districtId, wardCode }
+      );
+      if (ghnRes && ghnRes.success && ghnRes.order_code) {
+        ghnOrderCode = ghnRes.order_code;
+        ghnStatus = 'ready_to_pick';
+        ghnExpectedDelivery = ghnRes.expected_delivery_time || null;
+      }
+    } catch (ghnErr) {
+      console.warn('[GHN] Auto create shipping order for COD order warning:', ghnErr.message);
+    }
+  }
 
   const db = await initDb();
   await db.query(
-    `INSERT INTO orders (id, userId, customerName, customerPhone, shippingAddress, paymentMethod, items, totalAmount, status, voucherCode, discountAmount, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW(), NOW())`,
-    [id, userId, orderData.customerName, orderData.customerPhone, orderData.shippingAddress, paymentMethod, JSON.stringify(items), totalAmount, voucherCode, discountAmount]
+    `INSERT INTO orders (
+      id, userId, customerName, customerPhone, shippingAddress, paymentMethod, items,
+      totalAmount, status, voucherCode, discountAmount, paymentStatus, transactionId,
+      shippingFee, provinceId, districtId, wardCode, ghnOrderCode, ghnStatus,
+      ghnExpectedDelivery, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+    [
+      id,
+      userId,
+      orderData.customerName,
+      orderData.customerPhone,
+      orderData.shippingAddress,
+      paymentMethod,
+      JSON.stringify(items),
+      totalAmount,
+      voucherCode,
+      discountAmount,
+      paymentStatus,
+      shippingFee,
+      provinceId,
+      districtId,
+      wardCode,
+      ghnOrderCode,
+      ghnStatus,
+      ghnExpectedDelivery
+    ]
   );
 
   if (voucherCode) {
@@ -256,6 +408,16 @@ const create = async (orderData) => {
     status: 'pending',
     voucherCode,
     discountAmount,
+    paymentStatus,
+    transactionId: null,
+    shippingFee,
+    provinceId,
+    districtId,
+    wardCode,
+    ghnOrderCode,
+    ghnStatus,
+    ghnExpectedDelivery,
+    ghnTrackingUrl: ghnOrderCode ? `${config.ghn.trackingUrl}${ghnOrderCode}` : null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -294,6 +456,7 @@ const updateOrder = async (id, orderData) => {
   const customerPhone = orderData.customerPhone !== undefined ? orderData.customerPhone : current.customerPhone;
   const shippingAddress = orderData.shippingAddress !== undefined ? orderData.shippingAddress : current.shippingAddress;
   const paymentMethod = orderData.paymentMethod !== undefined ? orderData.paymentMethod : current.paymentMethod;
+  const paymentStatus = orderData.paymentStatus !== undefined ? orderData.paymentStatus : current.paymentStatus;
   const voucherCode = orderData.voucherCode !== undefined ? orderData.voucherCode : current.voucherCode;
   let discountAmount = orderData.discountAmount !== undefined ? Number(orderData.discountAmount) : Number(current.discountAmount || 0);
 
@@ -306,7 +469,8 @@ const updateOrder = async (id, orderData) => {
     }
     items = orderData.items;
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-    totalAmount = Math.max(0, subtotal - discountAmount);
+    const shippingFee = Number(current.shippingFee || 0);
+    totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
   } else if (orderData.totalAmount !== undefined) {
     totalAmount = Number(orderData.totalAmount);
   }
@@ -318,6 +482,7 @@ const updateOrder = async (id, orderData) => {
       customerPhone = ?,
       shippingAddress = ?,
       paymentMethod = ?,
+      paymentStatus = ?,
       status = ?,
       items = ?,
       totalAmount = ?,
@@ -325,7 +490,7 @@ const updateOrder = async (id, orderData) => {
       discountAmount = ?,
       updatedAt = NOW()
      WHERE id = ?`,
-    [customerName, customerPhone, shippingAddress, paymentMethod, status, JSON.stringify(items), totalAmount, voucherCode, discountAmount, id]
+    [customerName, customerPhone, shippingAddress, paymentMethod, paymentStatus, status, JSON.stringify(items), totalAmount, voucherCode, discountAmount, id]
   );
 
   const updatedOrder = await findById(id);
@@ -335,7 +500,7 @@ const updateOrder = async (id, orderData) => {
 
 const getStats = async () => {
   const db = await initDb();
-  const [rows] = await db.query('SELECT totalAmount, status FROM orders');
+  const [rows] = await db.query('SELECT totalAmount, status, createdAt, paymentMethod, items FROM orders');
 
   const totalRevenue = rows
     .filter((o) => o.status === 'completed')
@@ -346,14 +511,147 @@ const getStats = async () => {
   const countCompleted = rows.filter((o) => o.status === 'completed').length;
   const countCancelled = rows.filter((o) => o.status === 'cancelled').length;
 
+  // Doanh thu theo ngày (30 ngày gần nhất)
+  const dailyRevenue = [];
+  const now = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayOrders = rows.filter(o => {
+      if (!o.createdAt) return false;
+      const oDate = new Date(o.createdAt).toISOString().slice(0, 10);
+      return oDate === dateStr;
+    });
+    const rev = dayOrders.filter(o => o.status === 'completed').reduce((s, o) => s + Number(o.totalAmount), 0);
+    const count = dayOrders.length;
+    dailyRevenue.push({ date: dateStr, revenue: rev, orders: count });
+  }
+
+  // Doanh thu theo tháng (12 tháng gần nhất)
+  const monthlyRevenue = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const monthOrders = rows.filter(o => {
+      if (!o.createdAt) return false;
+      const oMonth = new Date(o.createdAt).toISOString().slice(0, 7);
+      return oMonth === monthStr;
+    });
+    const rev = monthOrders.filter(o => o.status === 'completed').reduce((s, o) => s + Number(o.totalAmount), 0);
+    const count = monthOrders.length;
+    monthlyRevenue.push({ month: monthStr, revenue: rev, orders: count });
+  }
+
+  // Doanh thu theo phương thức thanh toán
+  const paymentMethods = {};
+  rows.filter(o => o.status === 'completed').forEach(o => {
+    const method = (o.paymentMethod || 'COD').toUpperCase();
+    if (!paymentMethods[method]) paymentMethods[method] = { revenue: 0, count: 0 };
+    paymentMethods[method].revenue += Number(o.totalAmount);
+    paymentMethods[method].count += 1;
+  });
+
+  // Top sản phẩm bán chạy
+  const productSales = {};
+  rows.filter(o => o.status !== 'cancelled').forEach(o => {
+    try {
+      const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          const key = item.productId || item.id;
+          if (!key) return;
+          if (!productSales[key]) productSales[key] = { name: item.name || item.productName || `SP #${key}`, quantity: 0, revenue: 0 };
+          productSales[key].quantity += Number(item.quantity) || 1;
+          productSales[key].revenue += (Number(item.price) || 0) * (Number(item.quantity) || 1);
+        });
+      }
+    } catch {}
+  });
+  const topProducts = Object.entries(productSales)
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10);
+
+  // Doanh thu hôm nay
+  const todayStr = now.toISOString().slice(0, 10);
+  const todayOrders = rows.filter(o => o.createdAt && new Date(o.createdAt).toISOString().slice(0, 10) === todayStr);
+  const todayRevenue = todayOrders.filter(o => o.status === 'completed').reduce((s, o) => s + Number(o.totalAmount), 0);
+
   return {
     totalOrders: rows.length,
     totalRevenue,
     countPending,
     countProcessing,
     countCompleted,
-    countCancelled
+    countCancelled,
+    dailyRevenue,
+    monthlyRevenue,
+    paymentMethods,
+    topProducts,
+    todayRevenue,
+    todayOrders: todayOrders.length
   };
+};
+
+const updatePaymentStatus = async (id, { paymentStatus, transactionId, paymentMethod }) => {
+  const current = await findById(id);
+  if (!current) return null;
+
+  const db = await initDb();
+  const newPaymentStatus = paymentStatus || current.paymentStatus;
+  const newTransId = transactionId !== undefined ? transactionId : current.transactionId;
+  const newPaymentMethod = paymentMethod || current.paymentMethod;
+  const newStatus = (newPaymentStatus === 'paid' && current.status === 'pending') ? 'processing' : current.status;
+
+  await db.query(
+    `UPDATE orders SET
+      paymentStatus = ?,
+      transactionId = ?,
+      paymentMethod = ?,
+      status = ?,
+      updatedAt = NOW()
+     WHERE id = ?`,
+    [newPaymentStatus, newTransId, newPaymentMethod, newStatus, id]
+  );
+
+  let updatedOrder = await findById(id);
+
+  if (newPaymentStatus === 'paid' && !updatedOrder.ghnOrderCode) {
+    try {
+      const ghnRes = await ghnService.createShippingOrder(updatedOrder, {
+        districtId: updatedOrder.districtId,
+        wardCode: updatedOrder.wardCode
+      });
+      if (ghnRes && ghnRes.success && ghnRes.order_code) {
+        await updateGhnShipping(id, {
+          ghnOrderCode: ghnRes.order_code,
+          ghnStatus: 'ready_to_pick',
+          ghnExpectedDelivery: ghnRes.expected_delivery_time || null
+        });
+        updatedOrder = await findById(id);
+      }
+    } catch (ghnErr) {
+      console.warn('[GHN] Auto create shipping after payment error:', ghnErr.message);
+    }
+  }
+
+  await publishOrderEvent('order.payment_updated', updatedOrder);
+  return updatedOrder;
+};
+
+const updateGhnShipping = async (id, { ghnOrderCode, ghnStatus, ghnExpectedDelivery }) => {
+  const db = await initDb();
+  await db.query(
+    `UPDATE orders SET
+      ghnOrderCode = COALESCE(?, ghnOrderCode),
+      ghnStatus = COALESCE(?, ghnStatus),
+      ghnExpectedDelivery = COALESCE(?, ghnExpectedDelivery),
+      updatedAt = NOW()
+     WHERE id = ?`,
+    [ghnOrderCode, ghnStatus, ghnExpectedDelivery, id]
+  );
+  return findById(id);
 };
 
 module.exports = {
@@ -364,7 +662,14 @@ module.exports = {
   create,
   updateStatus,
   updateOrder,
+  updatePaymentStatus,
+  updateGhnShipping,
   getStats,
   getAvailableVouchers,
+  getAllVouchersAdmin,
+  createVoucher,
+  updateVoucher,
+  deleteVoucher,
   validateVoucher
 };
+
